@@ -1,26 +1,58 @@
 # Manager beliefs
 
-- Baraban is a multi-drum Windows application, not an Alfa-only client.
-  - source: owner directive, 2026-09-30
+- `lvlaksim1/project-alpha` is the authoritative repository and its capsule is the recovery source for clean chats.
+  - source: owner workflow / repository state
   - authority: owner-directive
-- Browser login and saved-session/manual import are both required authentication paths.
-  - source: owner directive, 2026-09-30
+
+- Project Alpha is a modular Windows client; it must not be architected as a one-off client for a single drum.
+  - source: owner directive
   - authority: owner-directive
-- Cookies must persist for as long as the server accepts them; Baraban must not impose a shorter lifetime.
-  - source: owner directive, 2026-09-30
+
+- Browser login and saved recorder-session ZIP import are both first-class session paths.
+  - source: owner directive
   - authority: owner-directive
-- HTTP parameters must be inspectable and editable by the user.
-  - source: owner directive, 2026-09-30
+
+- Session lifetime must follow server validity; Project Alpha must not impose an artificial shorter cookie lifetime.
+  - source: owner directive
   - authority: owner-directive
-- The former Alfa Loyalty Roulette module must remain available only as an archive unless the owner later supplies more data.
-  - source: owner directive, 2026-09-30
+
+- Material HTTP parameters must remain inspectable/editable by the owner.
+  - source: owner directive
   - authority: owner-directive
-- The current Alfa-Friday capture verifies the request bodies for `getCustomerOffersDrum`, `getOfferDrums` and `confirmDrumOffer`; production JS independently verifies the state transitions using `available` and `offerWinId`.
-  - source: owner-supplied browser capture plus captured production bundle, 2026-09-30
-  - authority: verified-runtime
-- X-GIB security headers vary by endpoint/request in the captured session, so one global copied header set is not an adequate replay model.
-  - source: owner-supplied browser capture, 2026-09-30
-  - authority: verified-runtime
-- Commit `0f41ba66bafee1d2ee10fa7bd9487d42c527ddba` builds successfully on GitHub Actions Windows runner.
-  - source: workflow run 36653647639
+
+- The old Alfa Loyalty Roulette module remains archive-only until the owner provides additional evidence/data.
+  - source: owner directive
+  - authority: owner-directive
+
+- The current Alfa-Friday capture and production JavaScript establish the observed chain around `advertCampaignId`, `available`, `offerWinId`, `getCustomerOffersDrum`, `getOfferDrums` and explicit `confirmDrumOffer`.
+  - source: owner-supplied capture + captured production bundle
+  - authority: verified-runtime evidence
+
+- Request-specific X-GIB/security headers vary by endpoint/request; one global copied header set is not an adequate replay model.
+  - source: owner-supplied capture
+  - authority: verified-runtime evidence
+
+- Normal software updates must be one EXE, not ZIP/CMD/PS1 bundles.
+  - source: owner directive, 2026-10-01
+  - authority: owner-directive
+
+- Normal updates must be cumulative: the current Update EXE must directly upgrade every supported installed Project Alpha version from v0.3.0 onward without requiring intermediate updates.
+  - source: correction after owner-observed v0.3.3 failure
+  - authority: owner-directive + verified-ci
+
+- Program files and user data are intentionally separated:
+  - program: `%LOCALAPPDATA%\Programs\Project Alpha`;
+  - user data: `%LOCALAPPDATA%\Baraban`.
+  - authority: implemented-and-verified
+
+- Uninstall preserves user data by default and deletes it only after explicit interactive confirmation.
+  - exact prompt: `Удалить также настройки и рабочие данные?`
+  - authority: owner-directive + verified-ci
+
+- CI/repository policy is minimal-storage: no Actions artifacts, no unnecessary caches, latest Release only.
+  - source: owner directive
+  - authority: owner-directive
+
+- v0.3.4 cumulative updater is verified in CI from v0.3.0, v0.3.1, v0.3.2 and v0.3.3 directly to v0.3.4.
+  - source: GitHub Actions release run 36935517796
   - authority: verified-ci
