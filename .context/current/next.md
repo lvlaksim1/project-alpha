@@ -1,6 +1,6 @@
 # Next actions
 
-1. Release and verify v0.3.2 -> v0.3.3 as a single Update EXE, including same-AppId uninstall-log update and silent-uninstall data preservation.
+1. Continue normal development from v0.3.3; future user-facing updates remain single EXE deltas and must preserve the verified uninstall-data policy.
 2. On Windows, import a real ZIP produced by the recorder extension through the Session tab.
 3. Verify import summary counts for cookies, request profiles, localStorage and sessionStorage.
 4. Navigate WebView2 to the captured origin and verify the restored authenticated state.
