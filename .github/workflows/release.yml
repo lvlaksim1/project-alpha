@@ -181,6 +181,59 @@ jobs:
           if (-not $installer) { throw "Full installer output was not found" }
           "SETUP_ASSET=$($installer.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
 
+      - name: Smoke-test same-AppId update and uninstall data preservation
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $baseSetupDir = Join-Path $PWD "base-setup"
+          New-Item -ItemType Directory -Path $baseSetupDir -Force | Out-Null
+
+          gh release download $env:BASE_TAG --repo $env:GITHUB_REPOSITORY --pattern "ProjectAlpha-Setup-*.exe" --dir $baseSetupDir --clobber
+          $baseSetup = Get-ChildItem -LiteralPath $baseSetupDir -Filter "ProjectAlpha-Setup-*.exe" | Select-Object -First 1
+          if (-not $baseSetup) { throw "Previous full Setup asset was not found." }
+
+          $p = Start-Process -FilePath $baseSetup.FullName -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/SP-" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "Previous Setup install failed: $($p.ExitCode)" }
+
+          $sentinelDir = Join-Path $env:LOCALAPPDATA "Baraban"
+          New-Item -ItemType Directory -Path $sentinelDir -Force | Out-Null
+          $sentinel = Join-Path $sentinelDir "uninstall-preserve-test.txt"
+          Set-Content -LiteralPath $sentinel -Value "preserve"
+
+          $p = Start-Process -FilePath $env:UPDATE_ASSET -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/SP-" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "Incremental Update EXE failed: $($p.ExitCode)" }
+
+          Stop-Process -Name "Baraban" -Force -ErrorAction SilentlyContinue
+
+          $uninstallRoot = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall"
+          $entries = @(
+            Get-ChildItem -LiteralPath $uninstallRoot |
+              Get-ItemProperty |
+              Where-Object { $_.DisplayName -eq "Project Alpha" }
+          )
+
+          if ($entries.Count -ne 1) {
+            throw "Expected exactly one Project Alpha uninstall entry, found $($entries.Count)."
+          }
+
+          if ([string]$entries[0].DisplayVersion -ne $env:VERSION) {
+            throw "Uninstall entry version mismatch: '$($entries[0].DisplayVersion)' != '$env:VERSION'."
+          }
+
+          $installDir = Join-Path $env:LOCALAPPDATA "Programs\Project Alpha"
+          $uninstaller = Get-ChildItem -LiteralPath $installDir -Filter "unins*.exe" | Sort-Object Name | Select-Object -First 1
+          if (-not $uninstaller) { throw "Inno uninstaller not found after update." }
+
+          $p = Start-Process -FilePath $uninstaller.FullName -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "Silent uninstall failed: $($p.ExitCode)" }
+
+          if (-not (Test-Path -LiteralPath $sentinel -PathType Leaf)) {
+            throw "Silent uninstall unexpectedly deleted user data."
+          }
+
+          Remove-Item -LiteralPath $sentinelDir -Recurse -Force -ErrorAction SilentlyContinue
+
       - name: Publish EXE update directly to GitHub Release
         shell: pwsh
         env:
