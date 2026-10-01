@@ -5,7 +5,7 @@ Updated: 2026-10-02 MSK
 ## Authority
 - Authoritative repository: `lvlaksim1/project-alpha`.
 - Project Manager context capsule is installed and is the recovery source for future clean chats.
-- Current released application version: `v0.3.4`.
+- Current released application version: `v0.3.5`.
 
 ## Application
 - Windows desktop client: .NET 8 WPF + WebView2.
@@ -38,15 +38,13 @@ Updated: 2026-10-02 MSK
 - Normal updates are delivered as one self-contained cumulative EXE:
   `ProjectAlpha-Update-to-vX.Y.Z.exe`.
 - Current normal update:
-  `ProjectAlpha-Update-to-v0.3.4.exe` (~2.1 MB).
-- The v0.3.4 updater supports direct update from every installed Project Alpha version `v0.3.0` through `v0.3.3`; intermediate updates are not required.
-- CI reconstructs all supported historical publishes from Git history, builds a SHA-256 delta for each base, embeds them into the single EXE, and smoke-tests every supported base to the target publish before release.
-- Verified by CI for v0.3.4:
-  - v0.3.0 -> v0.3.4;
-  - v0.3.1 -> v0.3.4;
-  - v0.3.2 -> v0.3.4;
-  - v0.3.3 -> v0.3.4.
-- Update application uses exact SHA-256 base detection, temporary backup, rollback on failure, post-update hash verification and application restart.
+  `ProjectAlpha-Update-to-v0.3.5.exe` (2,206,574 bytes, ~2.1 MB).
+- v0.3.5 remediates the real-machine v0.3.4 failure caused by Windows PowerShell 5.1 misreading a UTF-8-without-BOM updater script containing Cyrillic text; the executable updater script is now ASCII-safe and is explicitly parsed under Windows PowerShell 5.1 in CI.
+- The updater first attempts exact SHA-256 base detection. If a supported legacy installation is in a mixed/non-exact state, a bounded repair path can be selected from the executable version; repair still uses backup/rollback and verifies the complete immutable target publish by SHA-256 before success.
+- CI verified every supported legacy base to v0.3.5 and also a deliberately mixed legacy install that forces repair mode.
+- The final compiled `ProjectAlpha-Update-to-v0.3.5.exe` was tested against the previous real Setup, including the shared uninstall entry and silent user-data preservation.
+- Exact publish manifests are now persisted in Git under `release/manifests/` after successful releases so future cumulative deltas can use actual released hashes rather than reconstructed historical binaries.
+- Release run 36938695823 and Repository Hygiene run 36938956222 completed successfully; the release run created no Actions artifacts.
 - Update failures expose a human-readable diagnostic reason instead of only an exit code.
 
 ## Installer/uninstaller
