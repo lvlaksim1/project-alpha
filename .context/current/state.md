@@ -35,3 +35,10 @@ Updated: 2026-10-01 19:26 MSK
 - Editable drum definitions are now seeded into `%LOCALAPPDATA%\Baraban\Drums` and edited there, outside the installation directory.
 - The first delta updater migrates any existing installed `Drums/*.json` into the user data directory before replacing program files.
 - Full Setup remains a fallback/first-install asset; normal upgrades use `ProjectAlpha-Update-from-vA-to-vB.zip`.
+
+- First production delta release is verified: `v0.3.0 -> v0.3.1`.
+  - update asset: `ProjectAlpha-Update-from-v0.3.0-to-v0.3.1.zip`;
+  - size: 131,018 bytes (~128 KB);
+  - release workflow completed successfully;
+  - Repository Hygiene completed successfully and removed the older release.
+- The current release contains the delta ZIP as the normal upgrade path, a small exact publish manifest for the next delta, and a full Setup only as first-install/recovery fallback.

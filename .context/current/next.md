@@ -1,6 +1,6 @@
 # Next actions
 
-1. Validate the first real delta transition v0.3.0 -> v0.3.1 and use the resulting update ZIP as the normal update path.
+1. Treat delta ZIP as the default user-facing update for all subsequent releases; provide full Setup only when first installation or recovery is needed.
 2. On Windows, import a real ZIP produced by the recorder extension through the Session tab.
 3. Verify import summary counts for cookies, request profiles, localStorage and sessionStorage.
 4. Navigate WebView2 to the captured origin and verify the restored authenticated state.
