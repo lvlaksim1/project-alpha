@@ -56,3 +56,15 @@
 - v0.3.4 cumulative updater is verified in CI from v0.3.0, v0.3.1, v0.3.2 and v0.3.3 directly to v0.3.4.
   - source: GitHub Actions release run 36935517796
   - authority: verified-ci
+
+- The v0.3.4 real-machine updater failure was caused by a Windows PowerShell 5.1 compatibility defect: `Apply-Update.ps1` was UTF-8 without BOM and contained Cyrillic text, so Windows PowerShell 5.1 could misdecode and fail during parsing before the script's try/catch and diagnostic-file write.
+  - source: owner screenshot + reproduced Windows PowerShell 5.1 CI parse failure, 2026-10-02
+  - authority: verified-runtime + verified-ci
+
+- v0.3.5 fixes the updater failure class by keeping the executable updater PowerShell ASCII-safe, gating it explicitly under Windows PowerShell 5.1, adding an exact-SHA path plus a rollback-protected repair path for mixed legacy installations, and persisting exact publish manifests in Git for future cumulative bases.
+  - source: GitHub Actions release run 36938695823 and release v0.3.5
+  - authority: verified-ci
+
+- Release v0.3.5 is verified end-to-end in CI: cumulative legacy-base tests pass, the synthetic mixed-install repair test passes, the compiled Update EXE passes previous-Setup update/uninstall-preservation testing, Repository Hygiene succeeds, and the release run produced no Actions artifacts.
+  - source: GitHub Actions release run 36938695823; Repository Hygiene run 36938956222
+  - authority: verified-ci
