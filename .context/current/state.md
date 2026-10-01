@@ -70,3 +70,11 @@ Updated: 2026-10-01 19:26 MSK
   - CI installed the previous full Setup, applied the incremental Update EXE, verified exactly one Project Alpha uninstall entry at version 0.3.3, then silently uninstalled it;
   - silent uninstall preserved a sentinel under `%LOCALAPPDATA%\Baraban`;
   - interactive uninstall code asks `Удалить также настройки и рабочие данные?` and only deletes `%LOCALAPPDATA%\Baraban` on Yes.
+
+- Release `v0.3.3` verified the uninstall-data policy end-to-end in CI.
+  - Update path `v0.3.2 -> v0.3.3` uses one EXE: `ProjectAlpha-Update-from-v0.3.2-to-v0.3.3.exe`.
+  - The incremental updater shares the fixed Inno AppId with the full installer and updates the existing uninstall entry instead of creating a parallel application.
+  - CI verified exactly one `Project Alpha` uninstall entry after applying the update, with DisplayVersion `0.3.3`.
+  - CI performed a silent uninstall and verified that `%LOCALAPPDATA%\Baraban` remained intact.
+  - Interactive uninstall code asks exactly `Удалить также настройки и рабочие данные?`; only an explicit Yes deletes `%LOCALAPPDATA%\Baraban`.
+  - Release and Repository Hygiene workflows both completed successfully and created no Actions artifacts.
