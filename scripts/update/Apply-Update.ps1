@@ -8,6 +8,8 @@ $ErrorActionPreference = "Stop"
 
 $packageRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $basesRoot = Join-Path $packageRoot "bases"
+$repairRoot = Join-Path $packageRoot "repair"
+$targetManifestPath = Join-Path $packageRoot "target-manifest.json"
 $appExe = Join-Path $InstallDir "Baraban.exe"
 $processName = "Baraban"
 $userDataDir = Join-Path $env:LOCALAPPDATA "Baraban"
@@ -17,9 +19,17 @@ $installedDrumsDir = Join-Path $InstallDir "Drums"
 function Write-UpdateError([string]$Message) {
     if (-not [string]::IsNullOrWhiteSpace($ErrorPath)) {
         try {
-            Set-Content -LiteralPath $ErrorPath -Value $Message -Encoding UTF8
-        } catch {
+            $encoding = New-Object System.Text.UTF8Encoding -ArgumentList $false
+            [System.IO.File]::WriteAllText($ErrorPath, $Message, $encoding)
         }
+        catch {
+        }
+    }
+}
+
+function Clear-UpdateError {
+    if (-not [string]::IsNullOrWhiteSpace($ErrorPath)) {
+        Remove-Item -LiteralPath $ErrorPath -Force -ErrorAction SilentlyContinue
     }
 }
 
@@ -62,6 +72,21 @@ function Test-Baseline([string]$Root, $Manifest) {
     return $true
 }
 
+function Get-InstalledVersion {
+    if (-not (Test-Path -LiteralPath $appExe -PathType Leaf)) {
+        return $null
+    }
+
+    $info = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($appExe)
+    foreach ($candidate in @([string]$info.ProductVersion, [string]$info.FileVersion)) {
+        if ($candidate -match '(\d+\.\d+\.\d+)') {
+            return $Matches[1]
+        }
+    }
+
+    return $null
+}
+
 function Migrate-EditableDrums {
     if (-not (Test-Path -LiteralPath $installedDrumsDir -PathType Container)) {
         return
@@ -76,12 +101,10 @@ function Migrate-EditableDrums {
     }
 }
 
-function Find-MatchingDelta {
+function Find-ExactDelta {
     if (-not (Test-Path -LiteralPath $basesRoot -PathType Container)) {
         throw "В пакете обновления отсутствует каталог поддерживаемых базовых версий."
     }
-
-    $supported = New-Object System.Collections.Generic.List[string]
 
     foreach ($dir in @(Get-ChildItem -LiteralPath $basesRoot -Directory | Sort-Object Name -Descending)) {
         $manifestPath = Join-Path $dir.FullName "update-manifest.json"
@@ -94,26 +117,79 @@ function Find-MatchingDelta {
             continue
         }
 
-        $supported.Add([string]$manifest.fromTag)
-
         if (Test-Baseline $InstallDir $manifest) {
             return [pscustomobject]@{
                 Root = $dir.FullName
                 Manifest = $manifest
+                Mode = "exact"
             }
         }
     }
 
-    $versions = ($supported | Sort-Object -Unique) -join ", "
-    throw "Установленная версия Project Alpha не совпала ни с одной поддерживаемой базой ($versions). Файлы программы могли быть изменены или повреждены. Используйте полный Setup только для восстановления."
+    return $null
 }
 
-function Apply-Delta($selected) {
+function Get-RepairPlan {
+    $manifestPath = Join-Path $repairRoot "repair-manifest.json"
+    if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
+        throw "Точная сигнатура установленной версии не совпала, а безопасный repair-пакет отсутствует."
+    }
+
+    $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+    if ($manifest.schema -ne "project-alpha-repair-v1") {
+        throw "Пакет восстановления имеет неизвестный формат."
+    }
+
+    $installedVersion = Get-InstalledVersion
+    if ([string]::IsNullOrWhiteSpace($installedVersion)) {
+        throw "Не удалось определить версию установленного Baraban.exe после несовпадения SHA-256."
+    }
+
+    $supported = @($manifest.supportedVersions | ForEach-Object { [string]$_ })
+    if ($supported -notcontains $installedVersion) {
+        throw "Установлена версия $installedVersion, которая не поддерживается этим обновлением. Поддерживаются: $($supported -join ', ')."
+    }
+
+    return [pscustomobject]@{
+        Root = $repairRoot
+        Manifest = $manifest
+        Mode = "repair"
+        InstalledVersion = $installedVersion
+    }
+}
+
+function Assert-TargetState($TargetManifest) {
+    foreach ($entry in @($TargetManifest.files)) {
+        if ([bool]$entry.mutable) {
+            continue
+        }
+
+        $relative = Normalize-RelativePath ([string]$entry.path)
+        $fullPath = Join-Path $InstallDir $relative
+        if (-not (Test-Path -LiteralPath $fullPath -PathType Leaf)) {
+            throw "Финальная проверка не пройдена: отсутствует '$relative'."
+        }
+
+        $actual = Get-Sha256 $fullPath
+        $expected = ([string]$entry.sha256).ToLowerInvariant()
+        if ($actual -ne $expected) {
+            throw "Финальная проверка SHA-256 не пройдена для '$relative'."
+        }
+    }
+}
+
+function Apply-Plan($selected, $TargetManifest) {
     $manifest = $selected.Manifest
     $payloadRoot = Join-Path $selected.Root "payload"
 
-    Write-Host "Detected installed base: $($manifest.fromTag)"
-    Write-Host "Target version: $($manifest.toTag)"
+    if ($selected.Mode -eq "exact") {
+        Write-Host "Detected exact installed base: $($manifest.fromTag)"
+        Write-Host "Target version: $($manifest.toTag)"
+    }
+    else {
+        Write-Host "Exact base hash did not match; using safe repair mode for v$($selected.InstalledVersion)."
+        Write-Host "Target version: $($manifest.targetTag)"
+    }
 
     $running = @(Get-Process -Name $processName -ErrorAction SilentlyContinue)
     foreach ($process in $running) {
@@ -121,7 +197,8 @@ function Apply-Delta($selected) {
             if ($process.MainWindowHandle -ne 0) {
                 [void]$process.CloseMainWindow()
             }
-        } catch {
+        }
+        catch {
         }
     }
 
@@ -190,23 +267,8 @@ function Apply-Delta($selected) {
             }
         }
 
-        foreach ($entry in @($manifest.files)) {
-            $relative = Normalize-RelativePath ([string]$entry.path)
-            $destination = Join-Path $InstallDir $relative
-            $actual = Get-Sha256 $destination
-            if ($actual -ne ([string]$entry.sha256).ToLowerInvariant()) {
-                throw "Post-update verification failed for '$relative'."
-            }
-        }
-
-        foreach ($relativeRaw in @($manifest.delete)) {
-            $relative = Normalize-RelativePath ([string]$relativeRaw)
-            if (Test-Path -LiteralPath (Join-Path $InstallDir $relative)) {
-                throw "Post-update verification failed: '$relative' should have been removed."
-            }
-        }
-
-        Write-Host "Update complete: $($manifest.fromTag) -> $($manifest.toTag)"
+        Assert-TargetState $TargetManifest
+        Write-Host "Update complete in $($selected.Mode) mode."
     }
     catch {
         Write-Warning "Update failed. Rolling back changed files."
@@ -246,23 +308,40 @@ function Apply-Delta($selected) {
 }
 
 try {
+    Clear-UpdateError
+
     if (-not (Test-Path -LiteralPath $appExe -PathType Leaf)) {
         throw "Project Alpha не найден в '$InstallDir'. Для первой установки используйте полный Setup."
     }
 
+    if (-not (Test-Path -LiteralPath $targetManifestPath -PathType Leaf)) {
+        throw "В пакете обновления отсутствует финальный SHA-256 манифест."
+    }
+
+    $targetManifest = Get-Content -LiteralPath $targetManifestPath -Raw | ConvertFrom-Json
+    if ($targetManifest.schema -ne "project-alpha-publish-v1") {
+        throw "Финальный SHA-256 манифест имеет неизвестный формат."
+    }
+
     Migrate-EditableDrums
-    $selected = Find-MatchingDelta
-    Apply-Delta $selected
+
+    $selected = Find-ExactDelta
+    if ($null -eq $selected) {
+        $selected = Get-RepairPlan
+    }
+
+    Apply-Plan $selected $targetManifest
 
     if (-not $NoLaunch) {
         Start-Process -FilePath $appExe
     }
 
+    Clear-UpdateError
     exit 0
 }
 catch {
     $message = $_.Exception.Message
     Write-UpdateError $message
-    Write-Error $message
+    [Console]::Error.WriteLine($message)
     exit 1
 }
