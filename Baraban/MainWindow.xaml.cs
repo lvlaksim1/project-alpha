@@ -218,7 +218,7 @@ public partial class MainWindow : Window
             _session = _sessionStore.ImportEditable(SessionText.Text);
             _sessionStore.Save(_session);
             if (_browserBridge is not null)
-                await _browserBridge.RestoreCookiesToBrowserAsync(Browser, _session);
+                await _browserBridge.RestoreSessionToBrowserAsync(Browser, _session);
             RenderSession();
             AppendLog("Session saved (DPAPI/current Windows user).");
         }
@@ -247,7 +247,7 @@ public partial class MainWindow : Window
         }
         _sessionStore.Save(_session);
         if (_browserBridge is not null)
-            await _browserBridge.RestoreCookiesToBrowserAsync(Browser, _session);
+            await _browserBridge.RestoreSessionToBrowserAsync(Browser, _session);
         RenderSession();
         AppendLog("Cookie header imported and applied to browser session.");
     }
@@ -267,9 +267,11 @@ public partial class MainWindow : Window
             var importer = new CaptureZipImporter(_sessionStore);
             var result = importer.Import(dialog.FileName, _session);
             if (_browserBridge is not null)
-                await _browserBridge.RestoreCookiesToBrowserAsync(Browser, _session);
+                await _browserBridge.RestoreSessionToBrowserAsync(Browser, _session);
+            if (!string.IsNullOrWhiteSpace(result.RestoreUrl))
+                BrowserUrlText.Text = result.RestoreUrl;
             RenderSession();
-            AppendLog($"Capture ZIP imported: request profiles={result.RequestProfiles}, new cookies={result.CookiesAdded}");
+            AppendLog($"Capture ZIP imported: format={result.Format} v{result.FormatVersion}, extension={result.ExtensionVersion}, requests={result.RequestsObserved}, request profiles={result.RequestProfiles}, cookies={result.CookiesImported}, localStorage={result.LocalStorageKeys}, sessionStorage={result.SessionStorageKeys}");
         }
         catch (Exception ex)
         {

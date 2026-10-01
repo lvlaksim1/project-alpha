@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Baraban.Models;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
@@ -10,6 +11,8 @@ public sealed class WebViewSessionBridge(SessionStore store)
     {
         "Cookie", "Host", "Content-Length", "Connection", "Accept-Encoding"
     };
+
+    private string? _storageBootstrapScriptId;
 
     public async Task InitializeAsync(WebView2 webView, SessionProfile session, Action<string>? observedHeader = null)
     {
@@ -43,12 +46,13 @@ public sealed class WebViewSessionBridge(SessionStore store)
             }
         };
 
-        await RestoreCookiesToBrowserAsync(webView, session);
+        await RestoreSessionToBrowserAsync(webView, session);
 
         webView.NavigationCompleted += async (_, _) =>
         {
             try
             {
+                await ApplyBrowserStorageToCurrentPageAsync(webView, session);
                 await SyncCookiesFromBrowserAsync(webView, session);
                 observedHeader?.Invoke("Cookies");
             }
@@ -56,6 +60,16 @@ public sealed class WebViewSessionBridge(SessionStore store)
             {
             }
         };
+    }
+
+    public async Task RestoreSessionToBrowserAsync(WebView2 webView, SessionProfile session)
+    {
+        if (webView.CoreWebView2 is null)
+            return;
+
+        await RestoreCookiesToBrowserAsync(webView, session);
+        await InstallStorageBootstrapAsync(webView, session);
+        await ApplyBrowserStorageToCurrentPageAsync(webView, session);
     }
 
     public async Task SyncCookiesFromBrowserAsync(WebView2 webView, SessionProfile session, string? url = null)
@@ -97,12 +111,69 @@ public sealed class WebViewSessionBridge(SessionStore store)
             cookie.IsSecure = stored.IsSecure;
             if (stored.ExpiresUtc is { } expires)
                 cookie.Expires = expires.UtcDateTime;
-            if (Enum.TryParse<CoreWebView2CookieSameSiteKind>(stored.SameSite, true, out var sameSite))
+            if (!string.IsNullOrWhiteSpace(stored.SameSite) &&
+                Enum.TryParse<CoreWebView2CookieSameSiteKind>(stored.SameSite, true, out var sameSite))
+            {
                 cookie.SameSite = sameSite;
+            }
             manager.AddOrUpdateCookie(cookie);
         }
 
         await Task.CompletedTask;
+    }
+
+    private async Task InstallStorageBootstrapAsync(WebView2 webView, SessionProfile session)
+    {
+        if (webView.CoreWebView2 is null)
+            return;
+
+        if (!string.IsNullOrWhiteSpace(_storageBootstrapScriptId))
+        {
+            try { webView.CoreWebView2.RemoveScriptToExecuteOnDocumentCreated(_storageBootstrapScriptId); }
+            catch { }
+            _storageBootstrapScriptId = null;
+        }
+
+        var script = BuildStorageBootstrapScript(session.BrowserStorage);
+        if (string.IsNullOrWhiteSpace(script))
+            return;
+
+        _storageBootstrapScriptId = await webView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(script);
+    }
+
+    private static async Task ApplyBrowserStorageToCurrentPageAsync(WebView2 webView, SessionProfile session)
+    {
+        if (webView.CoreWebView2 is null)
+            return;
+
+        var script = BuildStorageBootstrapScript(session.BrowserStorage);
+        if (string.IsNullOrWhiteSpace(script))
+            return;
+
+        try { await webView.CoreWebView2.ExecuteScriptAsync(script); }
+        catch { }
+    }
+
+    private static string BuildStorageBootstrapScript(BrowserStorageState? state)
+    {
+        if (state is null || string.IsNullOrWhiteSpace(state.Url) ||
+            !Uri.TryCreate(state.Url, UriKind.Absolute, out var uri))
+            return "";
+
+        var originJson = JsonSerializer.Serialize(uri.GetLeftPart(UriPartial.Authority));
+        var localJson = JsonSerializer.Serialize(state.LocalStorage);
+        var sessionJson = JsonSerializer.Serialize(state.SessionStorage);
+
+        return "(() => {" +
+               "try {" +
+               "const expectedOrigin=" + originJson + ";" +
+               "if (location.origin !== expectedOrigin) return;" +
+               "const localValues=" + localJson + ";" +
+               "for (const [k,v] of Object.entries(localValues)) localStorage.setItem(k,String(v));" +
+               "const sessionValues=" + sessionJson + ";" +
+               "for (const [k,v] of Object.entries(sessionValues)) sessionStorage.setItem(k,String(v));" +
+               "} catch (_) {}" +
+               "})();";
     }
 
     private static bool ShouldPersistRequestProfile(string url, IReadOnlyDictionary<string, string> headers)
@@ -114,13 +185,17 @@ public sealed class WebViewSessionBridge(SessionStore store)
         return headers.Keys.Any(key =>
             key.Equals("Authorization", StringComparison.OrdinalIgnoreCase) ||
             key.Equals("X-CSRF-Token", StringComparison.OrdinalIgnoreCase) ||
-            key.StartsWith("X-GIB-", StringComparison.OrdinalIgnoreCase));
+            key.StartsWith("X-GIB-", StringComparison.OrdinalIgnoreCase) ||
+            key.StartsWith("X-B3-", StringComparison.OrdinalIgnoreCase) ||
+            key.Equals("X-Request-ID", StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool ShouldCapture(string header) =>
         header.Equals("Authorization", StringComparison.OrdinalIgnoreCase)
         || header.Equals("X-CSRF-Token", StringComparison.OrdinalIgnoreCase)
         || header.StartsWith("X-GIB-", StringComparison.OrdinalIgnoreCase)
+        || header.StartsWith("X-B3-", StringComparison.OrdinalIgnoreCase)
+        || header.Equals("X-Request-ID", StringComparison.OrdinalIgnoreCase)
         || header.Equals("Origin", StringComparison.OrdinalIgnoreCase)
         || header.Equals("Referer", StringComparison.OrdinalIgnoreCase)
         || header.Equals("Accept-Language", StringComparison.OrdinalIgnoreCase)
