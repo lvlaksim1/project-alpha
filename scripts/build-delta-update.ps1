@@ -1,7 +1,6 @@
 param(
+    [Parameter(Mandatory = $true)]
     [string]$BasePublishDir,
-
-    [string]$BaseManifestPath,
 
     [Parameter(Mandatory = $true)]
     [string]$CurrentPublishDir,
@@ -42,44 +41,7 @@ function Get-PublishMap([string]$Root) {
     return $map
 }
 
-function Get-ManifestMap([string]$ManifestPath, [string]$ExpectedTag) {
-    $manifest = Get-Content -LiteralPath $ManifestPath -Raw | ConvertFrom-Json
-
-    if ($manifest.schema -ne "project-alpha-publish-v1") {
-        throw "Unsupported base publish manifest schema."
-    }
-
-    if ($manifest.tag -ne $ExpectedTag) {
-        throw "Base publish manifest tag mismatch. Expected '$ExpectedTag', got '$($manifest.tag)'."
-    }
-
-    $map = @{}
-    foreach ($entry in @($manifest.files)) {
-        $path = [string]$entry.path
-        $map[$path] = [pscustomobject]@{
-            path = $path
-            sha256 = ([string]$entry.sha256).ToLowerInvariant()
-            size = [long]$entry.size
-            mutable = if ($null -ne $entry.mutable) { [bool]$entry.mutable } else { Test-MutablePath $path }
-        }
-    }
-
-    return $map
-}
-
-if ([string]::IsNullOrWhiteSpace($BasePublishDir) -eq [string]::IsNullOrWhiteSpace($BaseManifestPath)) {
-    throw "Provide exactly one of BasePublishDir or BaseManifestPath."
-}
-
-if (-not [string]::IsNullOrWhiteSpace($BaseManifestPath)) {
-    Write-Host "Using exact release manifest for base $BaseTag"
-    $base = Get-ManifestMap $BaseManifestPath $BaseTag
-}
-else {
-    Write-Warning "Base $BaseTag has no exact release manifest; reconstructing the base publish."
-    $base = Get-PublishMap $BasePublishDir
-}
-
+$base = Get-PublishMap $BasePublishDir
 $current = Get-PublishMap $CurrentPublishDir
 
 $changed = @()
@@ -105,8 +67,6 @@ foreach ($entry in $changed) {
     New-Item -ItemType Directory -Path (Split-Path -Parent $destination) -Force | Out-Null
     Copy-Item -LiteralPath $source -Destination $destination -Force
 }
-
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot "update\Apply-Update.ps1") -Destination (Join-Path $OutputDirectory "Apply-Update.ps1")
 
 $manifest = [ordered]@{
     schema = "project-alpha-delta-v1"

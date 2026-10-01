@@ -1,6 +1,3 @@
-#ifndef FromVersion
-  #define FromVersion "0.0.0"
-#endif
 #ifndef ToVersion
   #define ToVersion "0.0.0"
 #endif
@@ -30,7 +27,7 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0.19041
 OutputDir={#OutputDir}
-OutputBaseFilename=ProjectAlpha-Update-from-v{#FromVersion}-to-v{#ToVersion}
+OutputBaseFilename=ProjectAlpha-Update-to-v{#ToVersion}
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
@@ -43,7 +40,6 @@ DisableFinishedPage=yes
 Source: "{#SourceDir}\*"; DestDir: "{tmp}\ProjectAlphaUpdate"; Flags: ignoreversion recursesubdirs createallsubdirs deleteafterinstall
 
 [Code]
-
 var
   DeleteUserDataOnUninstall: Boolean;
 
@@ -79,23 +75,31 @@ var
   ResultCode: Integer;
   PowerShellExe: String;
   ScriptPath: String;
+  ErrorPath: String;
+  ErrorText: AnsiString;
 begin
   if CurStep = ssPostInstall then
   begin
     PowerShellExe := ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe');
     ScriptPath := ExpandConstant('{tmp}\ProjectAlphaUpdate\Apply-Update.ps1');
+    ErrorPath := ExpandConstant('{tmp}\ProjectAlphaUpdate\update-error.txt');
 
     if not Exec(
       PowerShellExe,
-      '-NoProfile -ExecutionPolicy Bypass -File "' + ScriptPath + '"',
+      '-NoProfile -ExecutionPolicy Bypass -File "' + ScriptPath + '" -ErrorPath "' + ErrorPath + '"',
       '',
-      SW_SHOW,
+      SW_HIDE,
       ewWaitUntilTerminated,
       ResultCode
     ) then
       RaiseException('Не удалось запустить механизм обновления.');
 
     if ResultCode <> 0 then
-      RaiseException('Обновление не применено. Код ошибки: ' + IntToStr(ResultCode));
+    begin
+      if LoadStringFromFile(ErrorPath, ErrorText) then
+        RaiseException('Обновление не применено.' + #13#10 + String(ErrorText))
+      else
+        RaiseException('Обновление не применено. Код ошибки: ' + IntToStr(ResultCode));
+    end;
   end;
 end;
