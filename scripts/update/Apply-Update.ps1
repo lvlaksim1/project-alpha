@@ -103,7 +103,7 @@ function Migrate-EditableDrums {
 
 function Find-ExactDelta {
     if (-not (Test-Path -LiteralPath $basesRoot -PathType Container)) {
-        throw "В пакете обновления отсутствует каталог поддерживаемых базовых версий."
+        throw "The update package does not contain the supported base versions directory."
     }
 
     foreach ($dir in @(Get-ChildItem -LiteralPath $basesRoot -Directory | Sort-Object Name -Descending)) {
@@ -132,22 +132,22 @@ function Find-ExactDelta {
 function Get-RepairPlan {
     $manifestPath = Join-Path $repairRoot "repair-manifest.json"
     if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
-        throw "Точная сигнатура установленной версии не совпала, а безопасный repair-пакет отсутствует."
+        throw "The exact installed SHA-256 signature did not match and the safe repair package is missing."
     }
 
     $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
     if ($manifest.schema -ne "project-alpha-repair-v1") {
-        throw "Пакет восстановления имеет неизвестный формат."
+        throw "The repair package has an unsupported format."
     }
 
     $installedVersion = Get-InstalledVersion
     if ([string]::IsNullOrWhiteSpace($installedVersion)) {
-        throw "Не удалось определить версию установленного Baraban.exe после несовпадения SHA-256."
+        throw "Cannot determine the installed Baraban.exe version after the SHA-256 mismatch."
     }
 
     $supported = @($manifest.supportedVersions | ForEach-Object { [string]$_ })
     if ($supported -notcontains $installedVersion) {
-        throw "Установлена версия $installedVersion, которая не поддерживается этим обновлением. Поддерживаются: $($supported -join ', ')."
+        throw "Installed version $installedVersion is not supported by this update. Supported versions: $($supported -join ', ')."
     }
 
     return [pscustomobject]@{
@@ -167,13 +167,13 @@ function Assert-TargetState($TargetManifest) {
         $relative = Normalize-RelativePath ([string]$entry.path)
         $fullPath = Join-Path $InstallDir $relative
         if (-not (Test-Path -LiteralPath $fullPath -PathType Leaf)) {
-            throw "Финальная проверка не пройдена: отсутствует '$relative'."
+            throw "Final verification failed: '$relative' is missing."
         }
 
         $actual = Get-Sha256 $fullPath
         $expected = ([string]$entry.sha256).ToLowerInvariant()
         if ($actual -ne $expected) {
-            throw "Финальная проверка SHA-256 не пройдена для '$relative'."
+            throw "Final SHA-256 verification failed for '$relative'."
         }
     }
 }
@@ -311,16 +311,16 @@ try {
     Clear-UpdateError
 
     if (-not (Test-Path -LiteralPath $appExe -PathType Leaf)) {
-        throw "Project Alpha не найден в '$InstallDir'. Для первой установки используйте полный Setup."
+        throw "Project Alpha was not found in '$InstallDir'. Use the full Setup for a first installation."
     }
 
     if (-not (Test-Path -LiteralPath $targetManifestPath -PathType Leaf)) {
-        throw "В пакете обновления отсутствует финальный SHA-256 манифест."
+        throw "The update package does not contain the final SHA-256 manifest."
     }
 
     $targetManifest = Get-Content -LiteralPath $targetManifestPath -Raw | ConvertFrom-Json
     if ($targetManifest.schema -ne "project-alpha-publish-v1") {
-        throw "Финальный SHA-256 манифест имеет неизвестный формат."
+        throw "The final SHA-256 manifest has an unsupported format."
     }
 
     Migrate-EditableDrums
