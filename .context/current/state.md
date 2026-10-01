@@ -25,3 +25,13 @@ Updated: 2026-10-01 19:26 MSK
   - self-contained win-x64 publish;
   - no Actions artifacts or retained intermediate packages;
   - final Setup.exe uploaded directly to GitHub Release.
+
+- Incremental updater architecture now mirrors `chatgpt-desktop-local-bridge`:
+  - exact SHA-256 publish manifest;
+  - delta package contains only changed/added files plus delete list and updater;
+  - strict base-version validation;
+  - temporary backup and rollback on failure;
+  - post-update hash verification and automatic application restart.
+- Editable drum definitions are now seeded into `%LOCALAPPDATA%\Baraban\Drums` and edited there, outside the installation directory.
+- The first delta updater migrates any existing installed `Drums/*.json` into the user data directory before replacing program files.
+- Full Setup remains a fallback/first-install asset; normal upgrades use `ProjectAlpha-Update-from-vA-to-vB.zip`.

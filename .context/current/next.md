@@ -1,6 +1,6 @@
 # Next actions
 
-1. Publish and validate installer release 0.3.0, including an update-over-existing-install test.
+1. Validate the first real delta transition v0.3.0 -> v0.3.1 and use the resulting update ZIP as the normal update path.
 2. On Windows, import a real ZIP produced by the recorder extension through the Session tab.
 3. Verify import summary counts for cookies, request profiles, localStorage and sessionStorage.
 4. Navigate WebView2 to the captured origin and verify the restored authenticated state.

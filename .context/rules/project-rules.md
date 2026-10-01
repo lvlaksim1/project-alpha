@@ -18,3 +18,9 @@
 - Never use `actions/upload-artifact` or retain intermediate publish/installer files. Runner-local build output is ephemeral and must disappear with the job.
 - Installer identity (`AppId`) is fixed across releases so every newer installer updates the existing per-user installation instead of creating a parallel installation.
 - Application session data under `%LOCALAPPDATA%\Baraban` is outside the installation directory and must survive normal application updates.
+
+- Normal upgrades must be delivered as delta ZIP packages built against the immediately previous retained release, following the same model as chatgpt-desktop-local-bridge.
+- Delta packages must validate the exact installed base by SHA-256, back up changed/deleted files, roll back on failure, verify the result, and restart the application.
+- User-editable data must not live in the installation directory. Editable drum JSON belongs under `%LOCALAPPDATA%\Baraban\Drums`.
+- Each release may retain a full Setup only as first-install/recovery fallback. The user-facing normal update is the matching `ProjectAlpha-Update-from-...-to-....zip`.
+- The small publish manifest stored in GitHub Release is required update metadata, not an Actions artifact.
