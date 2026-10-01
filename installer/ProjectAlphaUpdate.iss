@@ -103,12 +103,12 @@ begin
       if LoadStringFromFile(ErrorPath, ErrorBytes) then
       begin
         ErrorMessage := UTF8Decode(ErrorBytes);
-        RaiseException('Обновление не применено.' + #13#10 + ErrorMessage);
+        RaiseException('Обновление не применено.' + Chr(13) + Chr(10) + ErrorMessage);
       end
       else
         RaiseException(
           'Обновление не применено, а диагностический файл не был создан.' +
-          #13#10 + 'Код процесса обновления: ' + IntToStr(ResultCode)
+          Chr(13) + Chr(10) + 'Код процесса обновления: ' + IntToStr(ResultCode)
         );
     end;
 
