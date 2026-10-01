@@ -26,15 +26,15 @@ if ([string]::IsNullOrWhiteSpace($BasePublishDir) -eq [string]::IsNullOrWhiteSpa
 }
 
 function Test-MutablePath([string]$Path) {
-    return $Path.Replace("\\", "/").StartsWith("Drums/", [StringComparison]::OrdinalIgnoreCase)
+    return $Path.Replace("\", "/").StartsWith("Drums/", [StringComparison]::OrdinalIgnoreCase)
 }
 
 function Get-PublishMap([string]$Root) {
-    $rootPath = (Resolve-Path $Root).Path.TrimEnd("\\")
+    $rootPath = (Resolve-Path $Root).Path.TrimEnd("\")
     $map = @{}
 
     Get-ChildItem -LiteralPath $rootPath -File -Recurse | ForEach-Object {
-        $relative = $_.FullName.Substring($rootPath.Length).TrimStart("\\").Replace("\\", "/")
+        $relative = $_.FullName.Substring($rootPath.Length).TrimStart("\").Replace("\", "/")
         $map[$relative] = [pscustomobject]@{
             path = $relative
             sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -58,7 +58,7 @@ function Get-ManifestMap([string]$Path) {
 
     $map = @{}
     foreach ($entry in @($manifest.files)) {
-        $relative = ([string]$entry.path).Replace("\\", "/")
+        $relative = ([string]$entry.path).Replace("\", "/")
         $map[$relative] = [pscustomobject]@{
             path = $relative
             sha256 = ([string]$entry.sha256).ToLowerInvariant()
@@ -97,8 +97,8 @@ $payload = Join-Path $OutputDirectory "payload"
 New-Item -ItemType Directory -Path $payload -Force | Out-Null
 
 foreach ($entry in $changed) {
-    $source = Join-Path $CurrentPublishDir ($entry.path.Replace("/", "\\"))
-    $destination = Join-Path $payload ($entry.path.Replace("/", "\\"))
+    $source = Join-Path $CurrentPublishDir ($entry.path.Replace("/", "\"))
+    $destination = Join-Path $payload ($entry.path.Replace("/", "\"))
     New-Item -ItemType Directory -Path (Split-Path -Parent $destination) -Force | Out-Null
     Copy-Item -LiteralPath $source -Destination $destination -Force
 }
