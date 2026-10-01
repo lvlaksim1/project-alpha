@@ -18,6 +18,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-dotnet@v4
         with:
@@ -31,19 +33,105 @@ jobs:
             throw "release/VERSION must be semantic numeric X.Y.Z"
           }
           "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "TARGET_TAG=v$version" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Validate update scripts
+        shell: pwsh
+        run: |
+          [scriptblock]::Create((Get-Content .\scripts\create-publish-manifest.ps1 -Raw)) | Out-Null
+          [scriptblock]::Create((Get-Content .\scripts\build-delta-update.ps1 -Raw)) | Out-Null
+          [scriptblock]::Create((Get-Content .\scripts\update\Apply-Update.ps1 -Raw)) | Out-Null
 
       - name: Publish self-contained Windows x64
         shell: pwsh
         run: |
           dotnet restore Baraban/Baraban.csproj -r win-x64
-          dotnet publish Baraban/Baraban.csproj -c Release -r win-x64 --self-contained true --no-restore -p:DebugType=None -p:DebugSymbols=false -o publish
+          dotnet publish Baraban/Baraban.csproj -c Release -r win-x64 --self-contained true --no-restore -p:DebugType=None -p:DebugSymbols=false -p:Version=$env:VERSION -o publish
+
+      - name: Create exact publish manifest
+        shell: pwsh
+        run: |
+          .\scripts\create-publish-manifest.ps1 -PublishDir .\publish -Tag $env:TARGET_TAG -Commit "${{ github.sha }}" -OutputPath .\ProjectAlpha-PublishManifest.json
+
+      - name: Find previous release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $rows = @(gh release list --repo $env:GITHUB_REPOSITORY --limit 20 --json tagName,publishedAt,isDraft | ConvertFrom-Json) |
+            Where-Object { -not $_.isDraft -and $_.tagName -ne $env:TARGET_TAG } |
+            Sort-Object { [DateTimeOffset]$_.publishedAt } -Descending
+
+          $previous = $rows | Select-Object -First 1
+          if ($null -eq $previous) {
+            "BASE_TAG=" | Out-File -FilePath $env:GITHUB_ENV -Append
+            Write-Host "No previous release found. Delta package will not be created."
+            exit 0
+          }
+
+          "BASE_TAG=$($previous.tagName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+          Write-Host "Base release: $($previous.tagName)"
+
+      - name: Build incremental update from previous release
+        if: env.BASE_TAG != ''
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $baseTag = $env:BASE_TAG
+          $targetTag = $env:TARGET_TAG
+          $safeBase = ($baseTag -replace '[^A-Za-z0-9._-]', '_')
+          $safeTarget = ($targetTag -replace '[^A-Za-z0-9._-]', '_')
+          $output = Join-Path $PWD ("ProjectAlpha-Update-from-" + $safeBase + "-to-" + $safeTarget + ".zip")
+
+          $baseView = gh release view $baseTag --repo $env:GITHUB_REPOSITORY --json targetCommitish,assets | ConvertFrom-Json
+          $manifestAsset = @($baseView.assets | Where-Object { $_.name -eq "ProjectAlpha-PublishManifest.json" }) | Select-Object -First 1
+
+          if ($null -ne $manifestAsset) {
+            $manifestDir = Join-Path $PWD "base-manifest"
+            New-Item -ItemType Directory -Path $manifestDir -Force | Out-Null
+            gh release download $baseTag --repo $env:GITHUB_REPOSITORY --pattern "ProjectAlpha-PublishManifest.json" --dir $manifestDir --clobber
+            $baseManifest = Join-Path $manifestDir "ProjectAlpha-PublishManifest.json"
+
+            .\scripts\build-delta-update.ps1 `
+              -BaseManifestPath $baseManifest `
+              -CurrentPublishDir .\publish `
+              -BaseTag $baseTag `
+              -TargetTag $targetTag `
+              -TargetCommit "${{ github.sha }}" `
+              -OutputPath $output
+          }
+          else {
+            Write-Warning "Previous release has no exact manifest. Reconstructing its publish tree once."
+            $worktree = Join-Path $PWD "previous-release"
+            $basePublish = Join-Path $PWD "publish-base"
+
+            git worktree add --detach $worktree $baseView.targetCommitish
+            try {
+              dotnet restore (Join-Path $worktree "Baraban\Baraban.csproj") -r win-x64
+              dotnet publish (Join-Path $worktree "Baraban\Baraban.csproj") -c Release -r win-x64 --self-contained true --no-restore -p:DebugType=None -p:DebugSymbols=false -o $basePublish
+
+              .\scripts\build-delta-update.ps1 `
+                -BasePublishDir $basePublish `
+                -CurrentPublishDir .\publish `
+                -BaseTag $baseTag `
+                -TargetTag $targetTag `
+                -TargetCommit "${{ github.sha }}" `
+                -OutputPath $output
+            }
+            finally {
+              git worktree remove --force $worktree
+              Remove-Item -LiteralPath $basePublish -Recurse -Force -ErrorAction SilentlyContinue
+            }
+          }
+
+          "UPDATE_ASSET=$output" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Install Inno Setup compiler
         shell: pwsh
-        run: |
-          choco install innosetup -y --no-progress
+        run: choco install innosetup -y --no-progress
 
-      - name: Build installer
+      - name: Build fallback installer
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force release-output | Out-Null
@@ -60,9 +148,13 @@ jobs:
 
           $source = (Resolve-Path publish).Path
           $output = (Resolve-Path release-output).Path
-
-          & $iscc             "/DMyAppVersion=$env:VERSION"             "/DSourceDir=$source"             "/DOutputDir=$output"             "installer\ProjectAlpha.iss"
-
+          $isccArgs = @(
+            "/DMyAppVersion=$env:VERSION",
+            "/DSourceDir=$source",
+            "/DOutputDir=$output",
+            "installer\ProjectAlpha.iss"
+          )
+          & $iscc @isccArgs
           if ($LASTEXITCODE -ne 0) {
             throw "Inno Setup compilation failed with exit code $LASTEXITCODE"
           }
@@ -72,16 +164,24 @@ jobs:
             throw "Installer output was not found"
           }
 
-          "ASSET=$($installer.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "SETUP_ASSET=$($installer.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      - name: Publish installer directly to GitHub Release
+      - name: Publish update directly to GitHub Release
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $tag = "v$env:VERSION"
+          $assets = @($env:SETUP_ASSET, (Resolve-Path ".\ProjectAlpha-PublishManifest.json").Path)
+          if (-not [string]::IsNullOrWhiteSpace($env:UPDATE_ASSET)) {
+            $assets = @($env:UPDATE_ASSET) + $assets
+          }
+
+          $tag = $env:TARGET_TAG
           if (gh release view $tag --repo $env:GITHUB_REPOSITORY 2>$null) {
-            gh release upload $tag $env:ASSET --repo $env:GITHUB_REPOSITORY --clobber
-          } else {
-            gh release create $tag $env:ASSET --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --title "Project Alpha $tag" --notes "Windows x64 installer."
+            foreach ($asset in $assets) {
+              gh release upload $tag $asset --repo $env:GITHUB_REPOSITORY --clobber
+            }
+          }
+          else {
+            gh release create $tag @assets --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --title "Project Alpha $tag" --notes "Use ProjectAlpha-Update-from-*.zip for a normal update from the immediately previous release. Extract it and run Apply-Update.cmd. Setup.exe is only for first installation or recovery."
           }

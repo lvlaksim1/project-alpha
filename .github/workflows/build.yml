@@ -6,11 +6,13 @@ on:
     paths:
       - 'Baraban/**'
       - 'Baraban.sln'
+      - 'scripts/**'
       - '.github/workflows/build.yml'
   pull_request:
     paths:
       - 'Baraban/**'
       - 'Baraban.sln'
+      - 'scripts/**'
       - '.github/workflows/build.yml'
 
 permissions:
@@ -28,6 +30,12 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
+      - name: Validate update PowerShell syntax
+        shell: pwsh
+        run: |
+          [scriptblock]::Create((Get-Content .\scripts\create-publish-manifest.ps1 -Raw)) | Out-Null
+          [scriptblock]::Create((Get-Content .\scripts\build-delta-update.ps1 -Raw)) | Out-Null
+          [scriptblock]::Create((Get-Content .\scripts\update\Apply-Update.ps1 -Raw)) | Out-Null
       - name: Restore
         run: dotnet restore Baraban/Baraban.csproj
       - name: Build
