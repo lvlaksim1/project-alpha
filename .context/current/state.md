@@ -63,3 +63,10 @@ Updated: 2026-10-01 19:26 MSK
   - Yes deletes it after application uninstall;
   - silent uninstall preserves user data.
 - Incremental update installer now shares the application's fixed Inno AppId and carries the full uninstall code so normal small updates also refresh the installed uninstaller.
+
+- v0.3.3 verified:
+  - incremental update from v0.3.2 is a single EXE;
+  - Update EXE uses the same fixed Inno AppId and refreshes the shared uninstall log;
+  - CI installed the previous full Setup, applied the incremental Update EXE, verified exactly one Project Alpha uninstall entry at version 0.3.3, then silently uninstalled it;
+  - silent uninstall preserved a sentinel under `%LOCALAPPDATA%\Baraban`;
+  - interactive uninstall code asks `Удалить также настройки и рабочие данные?` and only deletes `%LOCALAPPDATA%\Baraban` on Yes.
