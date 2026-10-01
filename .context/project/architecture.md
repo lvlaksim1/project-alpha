@@ -30,8 +30,10 @@
 - Full install/recovery: `ProjectAlpha-Setup-vX.Y.Z-win-x64.exe`.
 - Normal update: cumulative `ProjectAlpha-Update-to-vX.Y.Z.exe`.
 - Fixed Inno Setup AppId: `{5C23B63A-5308-42A5-8EAB-68FF65A70D31}`.
-- Update EXE embeds one SHA-verified delta for each supported historical base, detects the installed base by file hashes, backs up affected files, applies the matching delta, verifies target hashes, rolls back on failure and restarts the app.
-- CI reconstructs historical publishes from Git history and smoke-tests every supported upgrade path before publication.
+- Update EXE embeds one SHA-verified delta for each supported historical base. It first attempts exact base detection by file hashes; when a supported legacy installation has a mixed/non-exact state, it may use a bounded repair payload. Both paths back up touched files, verify the complete immutable target publish by SHA-256, roll back on failure and restart the app.
+- CI uses persisted exact publish manifests for released bases when available; legacy bases without stored manifests may be reconstructed only for compatibility. Exact target publish manifests are persisted under `release/manifests/` after successful release.
+- `Apply-Update.ps1` is executed by Windows PowerShell 5.1 on user machines; CI explicitly parses it under Windows PowerShell 5.1, and the executable script is kept ASCII-safe to avoid UTF-8-without-BOM parser failures.
+- CI smoke-tests every supported upgrade path, a synthetic mixed-install repair path, and the compiled Update EXE against the previous real Setup before publication.
 - Update/full installer share the same AppId so the installed application/uninstaller remains one logical product.
 
 ## Repository/release hygiene
