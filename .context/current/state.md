@@ -46,3 +46,11 @@ Updated: 2026-10-01 19:26 MSK
 - Update packaging policy changed by owner directive: normal updates must be a single EXE, never a ZIP/CMD bundle.
 - Release pipeline now builds a temporary delta directory, smoke-tests it against a reconstructed previous publish, then embeds manifest + payload + updater into one Inno Setup self-extracting update EXE.
 - No update ZIP, CMD, standalone PowerShell, or standalone publish manifest is intended to be published from v0.3.2 onward.
+
+- First verified single-file incremental update is `v0.3.1 -> v0.3.2`.
+  - normal update asset: `ProjectAlpha-Update-from-v0.3.1-to-v0.3.2.exe`;
+  - size: 2,203,533 bytes (~2.1 MB);
+  - delta was smoke-tested against a reconstructed v0.3.1 publish before packaging;
+  - release workflow and Repository Hygiene both completed successfully;
+  - the build and release runs created no GitHub Actions artifacts;
+  - current release exposes only two executable assets: normal Update EXE and fallback full Setup EXE.
