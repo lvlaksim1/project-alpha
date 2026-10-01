@@ -1,19 +1,20 @@
 # Current state
 
-Updated: 2026-10-01 18:50 MSK
+Updated: 2026-10-01 19:26 MSK
 
 - Public repository `lvlaksim1/project-alpha` is the authoritative repository.
 - Project Manager capsule is installed and populated with the current project state.
-- Current application source has been migrated into this repository.
 - Current working drum: `alfa-friday-tasty-coffee-2026-09-30`.
 - Previous `alfa-loyalty-roulette` module is retained as an archive; automatic workflow execution is disabled for archived drums.
-- Session layer supports request-specific header profiles and DPAPI-protected local persistence.
+- Browser session ZIP technology from the supplied recorder extension v1.6.0 has been inspected directly from its source.
+- Recorder export format is verified as `browser-session-capture`, formatVersion 2.
+- Full session ZIP import is implemented:
+  - structured cookies with expiry/domain/path/HttpOnly/Secure/SameSite;
+  - end-state localStorage and sessionStorage;
+  - request-specific captured headers from requests.json/requestExtraInfo;
+  - capture metadata/provenance;
+  - WebView2 restoration for the captured origin.
+- Cookie-header parsing remains only a fallback when a capture lacks structured cookies.
+- Commit `5558858f4e388e95d6746a7ad9916003520092aa` passed Windows CI (run 36891659555).
 - No live cookies/tokens/security-header values are stored in the public repository.
-- Repository storage hygiene is enforced:
-  - no Actions build artifacts;
-  - no build cache by default;
-  - binary/archive/session/capture outputs ignored by Git;
-  - only the latest GitHub Release is retained;
-  - only the eight most recent completed workflow runs are retained;
-  - build CI does not run for context/documentation-only changes.
-- At policy introduction, Git contained no large blobs; the largest tracked source file was about 12 KB. The only large object was the current release ZIP (~79 MB), which is intentionally retained as the current downloadable build.
+- Repository storage hygiene remains enforced: no Actions artifacts/caches, generated captures/binaries excluded from Git, latest release only.
