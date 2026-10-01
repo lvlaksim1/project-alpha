@@ -21,7 +21,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 function Normalize-Path([string]$Path) {
-    return $Path.Replace("\\", "/")
+    return $Path.Replace("\", "/")
 }
 
 $targetManifest = Get-Content -LiteralPath $TargetManifestPath -Raw | ConvertFrom-Json
@@ -92,11 +92,11 @@ New-Item -ItemType Directory -Path $payloadRoot -Force | Out-Null
 $repairFiles = @()
 foreach ($path in @($repairPaths | Sort-Object)) {
     $entry = $target[$path]
-    $source = Join-Path $CurrentPublishDir ($path.Replace("/", "\\"))
+    $source = Join-Path $CurrentPublishDir ($path.Replace("/", "\"))
     if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
         throw "Target publish file missing: $path"
     }
-    $destination = Join-Path $payloadRoot ($path.Replace("/", "\\"))
+    $destination = Join-Path $payloadRoot ($path.Replace("/", "\"))
     New-Item -ItemType Directory -Path (Split-Path -Parent $destination) -Force | Out-Null
     Copy-Item -LiteralPath $source -Destination $destination -Force
     $repairFiles += $entry
