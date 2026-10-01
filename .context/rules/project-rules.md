@@ -18,10 +18,10 @@
 - Installer identity (`AppId`) is fixed across releases so every newer installer updates the existing per-user installation instead of creating a parallel installation.
 - Application session data under `%LOCALAPPDATA%\Baraban` is outside the installation directory and must survive normal application updates.
 
-- Normal upgrades must be delivered as one self-contained delta EXE built against the immediately previous retained release.
+- Normal upgrades must be delivered as one self-contained cumulative delta EXE that can update every supported installed Project Alpha version from v0.3.0 onward directly to the target version.
 - Delta packages must validate the exact installed base by SHA-256, back up changed/deleted files, roll back on failure, verify the result, and restart the application.
 - User-editable data must not live in the installation directory. Editable drum JSON belongs under `%LOCALAPPDATA%\Baraban\Drums`.
-- Each release may retain a full Setup only as first-install/recovery fallback. The user-facing normal update is exactly one matching `ProjectAlpha-Update-from-vA-to-vB.exe`.
+- Each release may retain a full Setup only as first-install/recovery fallback. The user-facing normal update is exactly one `ProjectAlpha-Update-to-vX.Y.Z.exe`.
 - No ZIP/CMD/PS1 or standalone manifest is published for normal updates. Internal manifest/payload/updater files are embedded inside the single update EXE and exist only temporarily on the CI runner.
 - Update EXE must be smoke-tested against a reconstructed copy of the previous published version before it is published.
 
@@ -30,3 +30,5 @@
 - Only an explicit Yes may remove `%LOCALAPPDATA%\Baraban`.
 - Silent/service uninstall must preserve user data.
 - Incremental Update EXE must share the fixed application AppId so the latest uninstall code is appended to the same Inno uninstall log rather than creating a second installed application.
+- CI must reconstruct every supported historical publish from Git history and smoke-test cumulative delta application from each base before publishing the Update EXE.
+- Update failures must expose a meaningful reason to the user; a bare numeric exit code is insufficient.

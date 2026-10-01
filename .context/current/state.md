@@ -78,3 +78,12 @@ Updated: 2026-10-01 19:26 MSK
   - CI performed a silent uninstall and verified that `%LOCALAPPDATA%\Baraban` remained intact.
   - Interactive uninstall code asks exactly `Удалить также настройки и рабочие данные?`; only an explicit Yes deletes `%LOCALAPPDATA%\Baraban`.
   - Release and Repository Hygiene workflows both completed successfully and created no Actions artifacts.
+
+- A real user update attempt exposed a design flaw in v0.3.3: the updater only accepted exactly v0.3.2 and surfaced failures as generic exit code 1.
+- Updater architecture has been changed to cumulative multi-base detection:
+  - supported installed bases are discovered from Git history starting at v0.3.0;
+  - a separate SHA-verified delta is embedded for each supported base inside one EXE;
+  - updater selects the correct delta by matching actual installed program hashes;
+  - the user no longer needs to install intermediate updates;
+  - failures write a detailed reason that the Inno wrapper displays to the user.
+- New user-facing naming is `ProjectAlpha-Update-to-vX.Y.Z.exe`, because one update EXE supports multiple source versions.
