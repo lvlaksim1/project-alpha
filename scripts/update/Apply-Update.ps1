@@ -1,16 +1,18 @@
-param()
+param(
+    [string]$InstallDir = (Join-Path $env:LOCALAPPDATA "Programs\Project Alpha"),
+    [switch]$NoLaunch
+)
 
 $ErrorActionPreference = "Stop"
 
 $packageRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $manifestPath = Join-Path $packageRoot "update-manifest.json"
 $payloadRoot = Join-Path $packageRoot "payload"
-$installDir = Join-Path $env:LOCALAPPDATA "Programs\Project Alpha"
-$appExe = Join-Path $installDir "Baraban.exe"
+$appExe = Join-Path $InstallDir "Baraban.exe"
 $processName = "Baraban"
 $userDataDir = Join-Path $env:LOCALAPPDATA "Baraban"
 $userDrumsDir = Join-Path $userDataDir "Drums"
-$installedDrumsDir = Join-Path $installDir "Drums"
+$installedDrumsDir = Join-Path $InstallDir "Drums"
 
 function Normalize-RelativePath([string]$Path) {
     if ([string]::IsNullOrWhiteSpace($Path)) {
@@ -66,7 +68,7 @@ if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
 }
 
 if (-not (Test-Path -LiteralPath $appExe -PathType Leaf)) {
-    throw "Installed application was not found at '$installDir'. Use the full Setup installer."
+    throw "Installed application was not found at '$InstallDir'. Use the full Setup installer."
 }
 
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
@@ -78,7 +80,7 @@ Migrate-EditableDrums
 
 Write-Host "Validating installed base: $($manifest.fromTag)"
 foreach ($entry in @($manifest.baseline)) {
-    Assert-ExpectedFile $installDir $entry
+    Assert-ExpectedFile $InstallDir $entry
 }
 
 $running = @(Get-Process -Name $processName -ErrorAction SilentlyContinue)
@@ -105,7 +107,7 @@ $hadOriginal = @{}
 try {
     foreach ($entry in @($manifest.files)) {
         $relative = Normalize-RelativePath $entry.path
-        $destination = Join-Path $installDir $relative
+        $destination = Join-Path $InstallDir $relative
         $source = Join-Path $payloadRoot $relative
 
         if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
@@ -119,6 +121,7 @@ try {
 
         $exists = Test-Path -LiteralPath $destination -PathType Leaf
         $hadOriginal[$relative] = $exists
+
         if ($exists) {
             $backupPath = Join-Path $backupRoot $relative
             New-Item -ItemType Directory -Path (Split-Path -Parent $backupPath) -Force | Out-Null
@@ -128,7 +131,7 @@ try {
 
     foreach ($relativeRaw in @($manifest.delete)) {
         $relative = Normalize-RelativePath ([string]$relativeRaw)
-        $destination = Join-Path $installDir $relative
+        $destination = Join-Path $InstallDir $relative
         $exists = Test-Path -LiteralPath $destination -PathType Leaf
         $hadOriginal[$relative] = $exists
 
@@ -141,15 +144,16 @@ try {
 
     foreach ($entry in @($manifest.files)) {
         $relative = Normalize-RelativePath $entry.path
-        $destination = Join-Path $installDir $relative
+        $destination = Join-Path $InstallDir $relative
         $source = Join-Path $payloadRoot $relative
+
         New-Item -ItemType Directory -Path (Split-Path -Parent $destination) -Force | Out-Null
         Copy-Item -LiteralPath $source -Destination $destination -Force
     }
 
     foreach ($relativeRaw in @($manifest.delete)) {
         $relative = Normalize-RelativePath ([string]$relativeRaw)
-        $destination = Join-Path $installDir $relative
+        $destination = Join-Path $InstallDir $relative
         if (Test-Path -LiteralPath $destination) {
             Remove-Item -LiteralPath $destination -Force
         }
@@ -157,7 +161,7 @@ try {
 
     foreach ($entry in @($manifest.files)) {
         $relative = Normalize-RelativePath $entry.path
-        $destination = Join-Path $installDir $relative
+        $destination = Join-Path $InstallDir $relative
         $actual = Get-Sha256 $destination
         if ($actual -ne ([string]$entry.sha256).ToLowerInvariant()) {
             throw "Post-update verification failed for '$relative'."
@@ -166,7 +170,7 @@ try {
 
     foreach ($relativeRaw in @($manifest.delete)) {
         $relative = Normalize-RelativePath ([string]$relativeRaw)
-        if (Test-Path -LiteralPath (Join-Path $installDir $relative)) {
+        if (Test-Path -LiteralPath (Join-Path $InstallDir $relative)) {
             throw "Post-update verification failed: '$relative' should have been removed."
         }
     }
@@ -178,7 +182,7 @@ catch {
 
     foreach ($entry in @($manifest.files)) {
         $relative = Normalize-RelativePath $entry.path
-        $destination = Join-Path $installDir $relative
+        $destination = Join-Path $InstallDir $relative
         $backupPath = Join-Path $backupRoot $relative
 
         if ($hadOriginal[$relative]) {
@@ -194,7 +198,7 @@ catch {
 
     foreach ($relativeRaw in @($manifest.delete)) {
         $relative = Normalize-RelativePath ([string]$relativeRaw)
-        $destination = Join-Path $installDir $relative
+        $destination = Join-Path $InstallDir $relative
         $backupPath = Join-Path $backupRoot $relative
 
         if ($hadOriginal[$relative] -and (Test-Path -LiteralPath $backupPath -PathType Leaf)) {
@@ -209,4 +213,6 @@ finally {
     Remove-Item -LiteralPath $backupRoot -Recurse -Force -ErrorAction SilentlyContinue
 }
 
-Start-Process -FilePath $appExe
+if (-not $NoLaunch) {
+    Start-Process -FilePath $appExe
+}

@@ -16,7 +16,7 @@ param(
     [string]$TargetCommit,
 
     [Parameter(Mandatory = $true)]
-    [string]$OutputPath
+    [string]$OutputDirectory
 )
 
 $ErrorActionPreference = "Stop"
@@ -92,49 +92,40 @@ foreach ($path in ($current.Keys | Sort-Object)) {
 $deleted = @($base.Keys | Where-Object { -not $current.ContainsKey($_) } | Sort-Object)
 $baseline = @($base.Values | Where-Object { -not $_.mutable } | Sort-Object path)
 
-$staging = Join-Path $env:TEMP ("ProjectAlpha-delta-" + [Guid]::NewGuid().ToString("N"))
-$payload = Join-Path $staging "payload"
+if (Test-Path -LiteralPath $OutputDirectory) {
+    Remove-Item -LiteralPath $OutputDirectory -Recurse -Force
+}
+
+$payload = Join-Path $OutputDirectory "payload"
 New-Item -ItemType Directory -Path $payload -Force | Out-Null
 
-try {
-    foreach ($entry in $changed) {
-        $source = Join-Path $CurrentPublishDir ($entry.path.Replace("/", "\"))
-        $destination = Join-Path $payload ($entry.path.Replace("/", "\"))
-        New-Item -ItemType Directory -Path (Split-Path -Parent $destination) -Force | Out-Null
-        Copy-Item -LiteralPath $source -Destination $destination -Force
-    }
-
-    Copy-Item -LiteralPath (Join-Path $PSScriptRoot "update\Apply-Update.ps1") -Destination (Join-Path $staging "Apply-Update.ps1")
-    Copy-Item -LiteralPath (Join-Path $PSScriptRoot "update\Apply-Update.cmd") -Destination (Join-Path $staging "Apply-Update.cmd")
-
-    $manifest = [ordered]@{
-        schema = "project-alpha-delta-v1"
-        fromTag = $BaseTag
-        toTag = $TargetTag
-        targetCommit = $TargetCommit
-        generatedAtUtc = [DateTimeOffset]::UtcNow.ToString("o")
-        baseline = $baseline
-        files = $changed
-        delete = $deleted
-    }
-
-    $manifest | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $staging "update-manifest.json") -Encoding UTF8
-
-    if (Test-Path -LiteralPath $OutputPath) {
-        Remove-Item -LiteralPath $OutputPath -Force
-    }
-
-    Compress-Archive -Path (Join-Path $staging "*") -DestinationPath $OutputPath -CompressionLevel Optimal
-
-    $payloadBytes = ($changed | Measure-Object -Property size -Sum).Sum
-    if ($null -eq $payloadBytes) { $payloadBytes = 0 }
-
-    Write-Host "Delta $BaseTag -> $TargetTag"
-    Write-Host "Changed files: $($changed.Count)"
-    Write-Host "Deleted files: $($deleted.Count)"
-    Write-Host "Payload bytes: $payloadBytes"
-    Write-Host "Output: $OutputPath"
+foreach ($entry in $changed) {
+    $source = Join-Path $CurrentPublishDir ($entry.path.Replace("/", "\"))
+    $destination = Join-Path $payload ($entry.path.Replace("/", "\"))
+    New-Item -ItemType Directory -Path (Split-Path -Parent $destination) -Force | Out-Null
+    Copy-Item -LiteralPath $source -Destination $destination -Force
 }
-finally {
-    Remove-Item -LiteralPath $staging -Recurse -Force -ErrorAction SilentlyContinue
+
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot "update\Apply-Update.ps1") -Destination (Join-Path $OutputDirectory "Apply-Update.ps1")
+
+$manifest = [ordered]@{
+    schema = "project-alpha-delta-v1"
+    fromTag = $BaseTag
+    toTag = $TargetTag
+    targetCommit = $TargetCommit
+    generatedAtUtc = [DateTimeOffset]::UtcNow.ToString("o")
+    baseline = $baseline
+    files = $changed
+    delete = $deleted
 }
+
+$manifest | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $OutputDirectory "update-manifest.json") -Encoding UTF8
+
+$payloadBytes = ($changed | Measure-Object -Property size -Sum).Sum
+if ($null -eq $payloadBytes) { $payloadBytes = 0 }
+
+Write-Host "Delta $BaseTag -> $TargetTag"
+Write-Host "Changed files: $($changed.Count)"
+Write-Host "Deleted files: $($deleted.Count)"
+Write-Host "Payload bytes: $payloadBytes"
+Write-Host "Staging: $OutputDirectory"
