@@ -52,7 +52,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $rows = @(gh release list --repo $env:GITHUB_REPOSITORY --limit 20 --json tagName,publishedAt,isDraft,targetCommitish | ConvertFrom-Json) |
+          $rows = @(gh release list --repo $env:GITHUB_REPOSITORY --limit 20 --json tagName,publishedAt,isDraft | ConvertFrom-Json) |
             Where-Object { -not $_.isDraft -and $_.tagName -ne $env:TARGET_TAG } |
             Sort-Object { [DateTimeOffset]$_.publishedAt } -Descending
 
@@ -61,9 +61,10 @@ jobs:
             throw "Previous release is required for an incremental update."
           }
 
+          $view = gh release view $previous.tagName --repo $env:GITHUB_REPOSITORY --json targetCommitish | ConvertFrom-Json
           "BASE_TAG=$($previous.tagName)" | Out-File -FilePath $env:GITHUB_ENV -Append
-          "BASE_COMMIT=$($previous.targetCommitish)" | Out-File -FilePath $env:GITHUB_ENV -Append
-          Write-Host "Base release: $($previous.tagName) @ $($previous.targetCommitish)"
+          "BASE_COMMIT=$($view.targetCommitish)" | Out-File -FilePath $env:GITHUB_ENV -Append
+          Write-Host "Base release: $($previous.tagName) @ $($view.targetCommitish)"
 
       - name: Reconstruct previous publish
         shell: pwsh
