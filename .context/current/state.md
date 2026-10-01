@@ -38,15 +38,19 @@ Updated: 2026-10-02 MSK
 - Normal updates are delivered as one self-contained cumulative EXE:
   `ProjectAlpha-Update-to-vX.Y.Z.exe`.
 - Current normal update:
-  `ProjectAlpha-Update-to-v0.3.5.exe` (2,206,574 bytes, ~2.1 MB).
-- v0.3.5 remediates the real-machine v0.3.4 failure caused by Windows PowerShell 5.1 misreading a UTF-8-without-BOM updater script containing Cyrillic text; the executable updater script is now ASCII-safe and is explicitly parsed under Windows PowerShell 5.1 in CI.
-- The updater first attempts exact SHA-256 base detection. If a supported legacy installation is in a mixed/non-exact state, a bounded repair path can be selected from the executable version; repair still uses backup/rollback and verifies the complete immutable target publish by SHA-256 before success.
-- CI verified every supported legacy base to v0.3.5 and also a deliberately mixed legacy install that forces repair mode.
-- The final compiled `ProjectAlpha-Update-to-v0.3.5.exe` was tested against the previous real Setup, including the shared uninstall entry and silent user-data preservation.
-- Exact publish manifests are now persisted in Git under `release/manifests/` after successful releases so future cumulative deltas can use actual released hashes rather than reconstructed historical binaries.
-- Release run 36938695823 and Repository Hygiene run 36938956222 completed successfully; the release run created no Actions artifacts.
-- Update failures expose a human-readable diagnostic reason instead of only an exit code.
-
+  `ProjectAlpha-Update-to-v0.3.5.exe` (~2.1 MB).
+- Owner-side execution of the v0.3.4 updater failed on the real installation with generic exit code 1 despite reconstructed-base CI success.
+- The failure class was traced to Windows PowerShell 5.1 handling of the updater script plus insufficient real-install compatibility assumptions.
+- v0.3.5 remediation includes:
+  - an ASCII-safe updater script explicitly gated under Windows PowerShell 5.1;
+  - persisted exact publish manifests for future cumulative bases;
+  - exact SHA-256 delta matching as the preferred path;
+  - a version-gated rollback-protected repair path for supported mixed/legacy installations when the exact immutable SHA signature does not match;
+  - diagnostic output written and decoded reliably so failures surface a human-readable reason;
+  - corrected delta/repair path normalization.
+- Release workflow run `36938695823` completed successfully.
+- CI verified all supported exact cumulative base paths, a synthetic mixed-install repair path, the compiled single-file Update EXE, the previous-Setup -> update path, and uninstall user-data preservation.
+- Update application retains temporary backup, rollback on failure, full target SHA-256 verification and application restart.
 ## Installer/uninstaller
 - Full Setup and Update EXE share fixed Inno Setup `AppId` `{5C23B63A-5308-42A5-8EAB-68FF65A70D31}`.
 - Updates refresh the same installed application/uninstall entry rather than creating a parallel installation.
