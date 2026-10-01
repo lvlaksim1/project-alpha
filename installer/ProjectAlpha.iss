@@ -53,3 +53,34 @@ Name: "{userdesktop}\Project Alpha"; Filename: "{app}\{#MyAppExeName}"; WorkingD
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "Запустить Project Alpha"; Flags: nowait postinstall skipifsilent
+
+[Code]
+var
+  DeleteUserDataOnUninstall: Boolean;
+
+function InitializeUninstall: Boolean;
+begin
+  DeleteUserDataOnUninstall := False;
+
+  if not UninstallSilent then
+    DeleteUserDataOnUninstall :=
+      MsgBox(
+        'Удалить также настройки и рабочие данные?',
+        mbConfirmation,
+        MB_YESNO
+      ) = IDYES;
+
+  Result := True;
+end;
+
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  UserDataDir: String;
+begin
+  if (CurUninstallStep = usPostUninstall) and DeleteUserDataOnUninstall then
+  begin
+    UserDataDir := ExpandConstant('{localappdata}\Baraban');
+    if DirExists(UserDataDir) then
+      DelTree(UserDataDir, True, True, True);
+  end;
+end;
