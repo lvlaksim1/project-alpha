@@ -314,12 +314,13 @@ jobs:
         run: |
           $manifestDir = Join-Path $PWD 'release\manifests'
           New-Item -ItemType Directory -Path $manifestDir -Force | Out-Null
-          $destination = Join-Path $manifestDir ($env:TARGET_TAG + '.json')
+          $relativeDestination = 'release/manifests/' + $env:TARGET_TAG + '.json'
+          $destination = Join-Path $PWD ($relativeDestination.Replace('/', '\'))
           Copy-Item -LiteralPath .\ProjectAlpha-PublishManifest.json -Destination $destination -Force
 
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -- $destination
+          git add -- $relativeDestination
           git diff --cached --quiet
           if ($LASTEXITCODE -eq 0) {
             Write-Host 'Exact publish manifest already persisted.'
