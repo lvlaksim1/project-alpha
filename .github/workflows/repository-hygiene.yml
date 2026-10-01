@@ -2,7 +2,7 @@ name: Repository Hygiene
 
 on:
   workflow_run:
-    workflows: ["Release Windows"]
+    workflows: ["Release Windows Installer"]
     types: [completed]
   workflow_dispatch:
   push:

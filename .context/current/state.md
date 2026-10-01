@@ -18,3 +18,10 @@ Updated: 2026-10-01 19:26 MSK
 - Commit `5558858f4e388e95d6746a7ad9916003520092aa` passed Windows CI (run 36891659555).
 - No live cookies/tokens/security-header values are stored in the public repository.
 - Repository storage hygiene remains enforced: no Actions artifacts/caches, generated captures/binaries excluded from Git, latest release only.
+
+- Windows distribution has been converted to an installer pipeline:
+  - fixed Inno Setup AppId for in-place upgrades;
+  - per-user installation under %LOCALAPPDATA%\Programs\Project Alpha;
+  - self-contained win-x64 publish;
+  - no Actions artifacts or retained intermediate packages;
+  - final Setup.exe uploaded directly to GitHub Release.
