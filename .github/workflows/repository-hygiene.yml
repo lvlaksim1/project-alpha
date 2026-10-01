@@ -5,6 +5,10 @@ on:
     workflows: ["Release Windows"]
     types: [completed]
   workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/repository-hygiene.yml'
 
 permissions:
   actions: write
@@ -36,10 +40,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: pwsh
         run: |
-          $releases = gh release list --limit 100 --json tagName,publishedAt | ConvertFrom-Json
+          $releases = gh release list --repo $env:GITHUB_REPOSITORY --limit 100 --json tagName,publishedAt | ConvertFrom-Json
           $old = $releases | Sort-Object { [datetime]$_.publishedAt } -Descending | Select-Object -Skip 1
           foreach ($release in $old) {
-            gh release delete $release.tagName --cleanup-tag --yes
+            gh release delete $release.tagName --repo $env:GITHUB_REPOSITORY --cleanup-tag --yes
           }
 
       - name: Keep only recent workflow runs
@@ -47,11 +51,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: pwsh
         run: |
-          $runs = gh run list --limit 100 --json databaseId,status,createdAt | ConvertFrom-Json
+          $runs = gh run list --repo $env:GITHUB_REPOSITORY --limit 100 --json databaseId,status,createdAt | ConvertFrom-Json
           $old = $runs |
             Where-Object { $_.status -eq "completed" } |
             Sort-Object { [datetime]$_.createdAt } -Descending |
             Select-Object -Skip 8
           foreach ($run in $old) {
-            gh run delete $run.databaseId
+            gh run delete $run.databaseId --repo $env:GITHUB_REPOSITORY
           }
