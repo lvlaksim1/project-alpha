@@ -29,9 +29,7 @@ jobs:
         shell: pwsh
         run: |
           $version = (Get-Content release/VERSION -Raw).Trim()
-          if ($version -notmatch '^\d+\.\d+\.\d+$') {
-            throw "release/VERSION must be semantic numeric X.Y.Z"
-          }
+          if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'release/VERSION must be semantic numeric X.Y.Z' }
           "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
           "TARGET_TAG=v$version" | Out-File -FilePath $env:GITHUB_ENV -Append
 
@@ -47,82 +45,100 @@ jobs:
           dotnet restore Baraban/Baraban.csproj -r win-x64
           dotnet publish Baraban/Baraban.csproj -c Release -r win-x64 --self-contained true --no-restore -p:DebugType=None -p:DebugSymbols=false -p:Version=$env:VERSION -o publish
 
-      - name: Find previous release
+      - name: Discover installable base versions from Git history
         shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
-          $rows = @(gh release list --repo $env:GITHUB_REPOSITORY --limit 20 --json tagName,publishedAt,isDraft | ConvertFrom-Json) |
-            Where-Object { -not $_.isDraft -and $_.tagName -ne $env:TARGET_TAG } |
-            Sort-Object { [DateTimeOffset]$_.publishedAt } -Descending
-
-          $previous = $rows | Select-Object -First 1
-          if ($null -eq $previous) {
-            throw "Previous release is required for an incremental update."
+          $seen = @{}
+          $bases = New-Object System.Collections.Generic.List[object]
+          foreach ($sha in @(git log --format=%H -- release/VERSION)) {
+            $raw = git show "${sha}:release/VERSION" 2>$null
+            if ($LASTEXITCODE -ne 0) { continue }
+            $versionText = ($raw | Out-String).Trim()
+            if ($versionText -notmatch '^\d+\.\d+\.\d+$') { continue }
+            $v = [version]$versionText
+            if ($v -lt [version]'0.3.0' -or $v -ge [version]$env:VERSION) { continue }
+            if ($seen.ContainsKey($versionText)) { continue }
+            $seen[$versionText] = $true
+            $bases.Add([pscustomobject]@{ version = $versionText; tag = "v$versionText"; commit = $sha })
           }
 
-          $view = gh release view $previous.tagName --repo $env:GITHUB_REPOSITORY --json targetCommitish | ConvertFrom-Json
-          "BASE_TAG=$($previous.tagName)" | Out-File -FilePath $env:GITHUB_ENV -Append
-          "BASE_COMMIT=$($view.targetCommitish)" | Out-File -FilePath $env:GITHUB_ENV -Append
-          Write-Host "Base release: $($previous.tagName) @ $($view.targetCommitish)"
+          $bases = @($bases | Sort-Object { [version]$_.version })
+          if ($bases.Count -eq 0) { throw 'No installable base versions were discovered.' }
+          $bases | ConvertTo-Json -Depth 4 | Set-Content .\release-bases.json -Encoding UTF8
+          Write-Host ('Supported bases: ' + (($bases | ForEach-Object { $_.tag }) -join ', '))
 
-      - name: Reconstruct previous publish
+      - name: Reconstruct all base publishes and build cumulative delta staging
         shell: pwsh
         run: |
-          $worktree = Join-Path $PWD "previous-release"
-          $basePublish = Join-Path $PWD "publish-base"
-          git worktree add --detach $worktree $env:BASE_COMMIT
+          $bases = @(Get-Content .\release-bases.json -Raw | ConvertFrom-Json)
+          New-Item -ItemType Directory -Force .\delta-staging\bases | Out-Null
+          New-Item -ItemType Directory -Force .\base-publishes | Out-Null
 
-          try {
-            $baseVersion = (Get-Content (Join-Path $worktree "release\VERSION") -Raw).Trim()
-            dotnet restore (Join-Path $worktree "Baraban\Baraban.csproj") -r win-x64
-            dotnet publish (Join-Path $worktree "Baraban\Baraban.csproj") -c Release -r win-x64 --self-contained true --no-restore -p:DebugType=None -p:DebugSymbols=false -p:Version=$baseVersion -o $basePublish
+          foreach ($base in $bases) {
+            $safe = $base.tag -replace '[^A-Za-z0-9._-]', '_'
+            $worktree = Join-Path $PWD ("worktree-" + $safe)
+            $basePublish = Join-Path $PWD ("base-publishes\" + $safe)
+            $deltaDir = Join-Path $PWD ("delta-staging\bases\" + $safe)
+
+            git worktree add --detach $worktree $base.commit
+            try {
+              dotnet restore (Join-Path $worktree 'Baraban\Baraban.csproj') -r win-x64
+              dotnet publish (Join-Path $worktree 'Baraban\Baraban.csproj') -c Release -r win-x64 --self-contained true --no-restore -p:DebugType=None -p:DebugSymbols=false -p:Version=$($base.version) -o $basePublish
+
+              .\scripts\build-delta-update.ps1 `
+                -BasePublishDir $basePublish `
+                -CurrentPublishDir .\publish `
+                -BaseTag $base.tag `
+                -TargetTag $env:TARGET_TAG `
+                -TargetCommit "${{ github.sha }}" `
+                -OutputDirectory $deltaDir
+            }
+            finally {
+              git worktree remove --force $worktree
+            }
           }
-          finally {
-            git worktree remove --force $worktree
-          }
 
-      - name: Build delta staging
+          Copy-Item .\scripts\update\Apply-Update.ps1 .\delta-staging\Apply-Update.ps1 -Force
+
+      - name: Smoke-test cumulative delta from every supported base
         shell: pwsh
         run: |
-          .\scripts\build-delta-update.ps1 `
-            -BasePublishDir .\publish-base `
-            -CurrentPublishDir .\publish `
-            -BaseTag $env:BASE_TAG `
-            -TargetTag $env:TARGET_TAG `
-            -TargetCommit "${{ github.sha }}" `
-            -OutputDirectory .\delta-staging
-
-      - name: Smoke-test delta application
-        shell: pwsh
-        run: |
-          $testInstall = Join-Path $PWD "test-install"
-          Copy-Item -Path .\publish-base -Destination $testInstall -Recurse -Force
-
-          & .\delta-staging\Apply-Update.ps1 -InstallDir $testInstall -NoLaunch
-
+          $bases = @(Get-Content .\release-bases.json -Raw | ConvertFrom-Json)
           $expectedRoot = (Resolve-Path .\publish).Path.TrimEnd('\')
-          $actualRoot = (Resolve-Path $testInstall).Path.TrimEnd('\')
-
           $expected = @{}
           Get-ChildItem -LiteralPath $expectedRoot -File -Recurse | ForEach-Object {
             $rel = $_.FullName.Substring($expectedRoot.Length).TrimStart('\')
             $expected[$rel] = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash
           }
 
-          $actual = @{}
-          Get-ChildItem -LiteralPath $actualRoot -File -Recurse | ForEach-Object {
-            $rel = $_.FullName.Substring($actualRoot.Length).TrimStart('\')
-            $actual[$rel] = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash
-          }
+          foreach ($base in $bases) {
+            $safe = $base.tag -replace '[^A-Za-z0-9._-]', '_'
+            $basePublish = Join-Path $PWD ("base-publishes\" + $safe)
+            $testInstall = Join-Path $PWD ("test-install-" + $safe)
+            New-Item -ItemType Directory -Path $testInstall -Force | Out-Null
+            Copy-Item -Path (Join-Path $basePublish '*') -Destination $testInstall -Recurse -Force
 
-          if ($expected.Count -ne $actual.Count) {
-            throw "Delta smoke test file-count mismatch: expected $($expected.Count), actual $($actual.Count)"
-          }
+            $errorPath = Join-Path $PWD ("error-" + $safe + '.txt')
+            & .\delta-staging\Apply-Update.ps1 -InstallDir $testInstall -NoLaunch -ErrorPath $errorPath
+            if ($LASTEXITCODE -ne 0) {
+              $detail = if (Test-Path $errorPath) { Get-Content $errorPath -Raw } else { 'no error detail' }
+              throw "Cumulative delta failed for $($base.tag): $detail"
+            }
 
-          foreach ($path in $expected.Keys) {
-            if (-not $actual.ContainsKey($path)) { throw "Delta smoke test missing file: $path" }
-            if ($actual[$path] -ne $expected[$path]) { throw "Delta smoke test hash mismatch: $path" }
+            $actualRoot = (Resolve-Path $testInstall).Path.TrimEnd('\')
+            $actual = @{}
+            Get-ChildItem -LiteralPath $actualRoot -File -Recurse | ForEach-Object {
+              $rel = $_.FullName.Substring($actualRoot.Length).TrimStart('\')
+              $actual[$rel] = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash
+            }
+
+            if ($expected.Count -ne $actual.Count) {
+              throw "File-count mismatch after $($base.tag) update: expected $($expected.Count), actual $($actual.Count)"
+            }
+            foreach ($path in $expected.Keys) {
+              if (-not $actual.ContainsKey($path)) { throw "Missing after $($base.tag) update: $path" }
+              if ($actual[$path] -ne $expected[$path]) { throw "Hash mismatch after $($base.tag) update: $path" }
+            }
           }
 
       - name: Install Inno Setup compiler
@@ -138,28 +154,25 @@ jobs:
             "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
           )
           $iscc = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
-          if (-not $iscc) { throw "ISCC.exe was not found after Inno Setup installation" }
+          if (-not $iscc) { throw 'ISCC.exe was not found after Inno Setup installation' }
           "ISCC=$iscc" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      - name: Build single-file incremental updater
+      - name: Build cumulative single-file updater
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force release-output | Out-Null
-          $fromVersion = $env:BASE_TAG.TrimStart('v')
           $source = (Resolve-Path delta-staging).Path
           $output = (Resolve-Path release-output).Path
           $args = @(
-            "/DFromVersion=$fromVersion",
             "/DToVersion=$env:VERSION",
             "/DSourceDir=$source",
             "/DOutputDir=$output",
-            "installer\ProjectAlphaUpdate.iss"
+            'installer\ProjectAlphaUpdate.iss'
           )
           & $env:ISCC @args
-          if ($LASTEXITCODE -ne 0) { throw "Incremental updater compilation failed: $LASTEXITCODE" }
+          if ($LASTEXITCODE -ne 0) { throw "Cumulative updater compilation failed: $LASTEXITCODE" }
 
-          $name = "ProjectAlpha-Update-from-v$fromVersion-to-v$env:VERSION.exe"
-          $asset = Join-Path $output $name
+          $asset = Join-Path $output ("ProjectAlpha-Update-to-v" + $env:VERSION + '.exe')
           if (-not (Test-Path -LiteralPath $asset -PathType Leaf)) { throw "Update EXE not found: $asset" }
           "UPDATE_ASSET=$asset" | Out-File -FilePath $env:GITHUB_ENV -Append
 
@@ -172,80 +185,61 @@ jobs:
             "/DMyAppVersion=$env:VERSION",
             "/DSourceDir=$source",
             "/DOutputDir=$output",
-            "installer\ProjectAlpha.iss"
+            'installer\ProjectAlpha.iss'
           )
           & $env:ISCC @args
           if ($LASTEXITCODE -ne 0) { throw "Full installer compilation failed: $LASTEXITCODE" }
-
           $installer = Get-ChildItem release-output -Filter "ProjectAlpha-Setup-v$env:VERSION-win-x64.exe" | Select-Object -First 1
-          if (-not $installer) { throw "Full installer output was not found" }
+          if (-not $installer) { throw 'Full installer output was not found' }
           "SETUP_ASSET=$($installer.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      - name: Smoke-test same-AppId update and uninstall data preservation
+      - name: Smoke-test EXE updater and uninstall data preservation
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $baseSetupDir = Join-Path $PWD "base-setup"
+          $latest = @(Get-Content .\release-bases.json -Raw | ConvertFrom-Json | Sort-Object { [version]$_.version } -Descending)[0]
+          $baseSetupDir = Join-Path $PWD 'base-setup'
           New-Item -ItemType Directory -Path $baseSetupDir -Force | Out-Null
+          gh release download $latest.tag --repo $env:GITHUB_REPOSITORY --pattern 'ProjectAlpha-Setup-*.exe' --dir $baseSetupDir --clobber
+          $baseSetup = Get-ChildItem -LiteralPath $baseSetupDir -Filter 'ProjectAlpha-Setup-*.exe' | Select-Object -First 1
+          if (-not $baseSetup) { throw 'Previous full Setup asset was not found.' }
 
-          gh release download $env:BASE_TAG --repo $env:GITHUB_REPOSITORY --pattern "ProjectAlpha-Setup-*.exe" --dir $baseSetupDir --clobber
-          $baseSetup = Get-ChildItem -LiteralPath $baseSetupDir -Filter "ProjectAlpha-Setup-*.exe" | Select-Object -First 1
-          if (-not $baseSetup) { throw "Previous full Setup asset was not found." }
-
-          $p = Start-Process -FilePath $baseSetup.FullName -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/SP-" -Wait -PassThru
+          $p = Start-Process -FilePath $baseSetup.FullName -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-' -Wait -PassThru
           if ($p.ExitCode -ne 0) { throw "Previous Setup install failed: $($p.ExitCode)" }
 
-          $sentinelDir = Join-Path $env:LOCALAPPDATA "Baraban"
+          $sentinelDir = Join-Path $env:LOCALAPPDATA 'Baraban'
           New-Item -ItemType Directory -Path $sentinelDir -Force | Out-Null
-          $sentinel = Join-Path $sentinelDir "uninstall-preserve-test.txt"
-          Set-Content -LiteralPath $sentinel -Value "preserve"
+          $sentinel = Join-Path $sentinelDir 'uninstall-preserve-test.txt'
+          Set-Content -LiteralPath $sentinel -Value 'preserve'
 
-          $p = Start-Process -FilePath $env:UPDATE_ASSET -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/SP-" -Wait -PassThru
-          if ($p.ExitCode -ne 0) { throw "Incremental Update EXE failed: $($p.ExitCode)" }
+          $p = Start-Process -FilePath $env:UPDATE_ASSET -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-' -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "Cumulative Update EXE failed: $($p.ExitCode)" }
+          Stop-Process -Name 'Baraban' -Force -ErrorAction SilentlyContinue
 
-          Stop-Process -Name "Baraban" -Force -ErrorAction SilentlyContinue
+          $uninstallRoot = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall'
+          $entries = @(Get-ChildItem -LiteralPath $uninstallRoot | Get-ItemProperty | Where-Object { $_.DisplayName -eq 'Project Alpha' })
+          if ($entries.Count -ne 1) { throw "Expected exactly one Project Alpha uninstall entry, found $($entries.Count)." }
+          if ([string]$entries[0].DisplayVersion -ne $env:VERSION) { throw "Uninstall entry version mismatch: '$($entries[0].DisplayVersion)' != '$env:VERSION'." }
 
-          $uninstallRoot = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall"
-          $entries = @(
-            Get-ChildItem -LiteralPath $uninstallRoot |
-              Get-ItemProperty |
-              Where-Object { $_.DisplayName -eq "Project Alpha" }
-          )
-
-          if ($entries.Count -ne 1) {
-            throw "Expected exactly one Project Alpha uninstall entry, found $($entries.Count)."
-          }
-
-          if ([string]$entries[0].DisplayVersion -ne $env:VERSION) {
-            throw "Uninstall entry version mismatch: '$($entries[0].DisplayVersion)' != '$env:VERSION'."
-          }
-
-          $installDir = Join-Path $env:LOCALAPPDATA "Programs\Project Alpha"
-          $uninstaller = Get-ChildItem -LiteralPath $installDir -Filter "unins*.exe" | Sort-Object Name | Select-Object -First 1
-          if (-not $uninstaller) { throw "Inno uninstaller not found after update." }
-
-          $p = Start-Process -FilePath $uninstaller.FullName -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART" -Wait -PassThru
+          $installDir = Join-Path $env:LOCALAPPDATA 'Programs\Project Alpha'
+          $uninstaller = Get-ChildItem -LiteralPath $installDir -Filter 'unins*.exe' | Sort-Object Name | Select-Object -First 1
+          if (-not $uninstaller) { throw 'Inno uninstaller not found after update.' }
+          $p = Start-Process -FilePath $uninstaller.FullName -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART' -Wait -PassThru
           if ($p.ExitCode -ne 0) { throw "Silent uninstall failed: $($p.ExitCode)" }
-
-          if (-not (Test-Path -LiteralPath $sentinel -PathType Leaf)) {
-            throw "Silent uninstall unexpectedly deleted user data."
-          }
-
+          if (-not (Test-Path -LiteralPath $sentinel -PathType Leaf)) { throw 'Silent uninstall unexpectedly deleted user data.' }
           Remove-Item -LiteralPath $sentinelDir -Recurse -Force -ErrorAction SilentlyContinue
 
-      - name: Publish EXE update directly to GitHub Release
+      - name: Publish cumulative EXE update directly to GitHub Release
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $tag = $env:TARGET_TAG
           $assets = @($env:UPDATE_ASSET, $env:SETUP_ASSET)
+          $notes = 'Normal update: run the single ProjectAlpha-Update-to-vX.Y.Z.exe file. It automatically detects any supported installed Project Alpha version from v0.3.0 onward. Full Setup.exe is only for first installation or recovery.'
           if (gh release view $tag --repo $env:GITHUB_REPOSITORY 2>$null) {
-            foreach ($asset in $assets) {
-              gh release upload $tag $asset --repo $env:GITHUB_REPOSITORY --clobber
-            }
-          }
-          else {
-            gh release create $tag @assets --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --title "Project Alpha $tag" --notes "Normal update: run the single ProjectAlpha-Update-from-...exe file. Full Setup.exe is retained only for first installation or recovery."
+            foreach ($asset in $assets) { gh release upload $tag $asset --repo $env:GITHUB_REPOSITORY --clobber }
+          } else {
+            gh release create $tag @assets --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --title "Project Alpha $tag" --notes $notes
           }
