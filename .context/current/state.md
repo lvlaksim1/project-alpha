@@ -34,7 +34,7 @@ Updated: 2026-10-01 19:26 MSK
   - post-update hash verification and automatic application restart.
 - Editable drum definitions are now seeded into `%LOCALAPPDATA%\Baraban\Drums` and edited there, outside the installation directory.
 - The first delta updater migrates any existing installed `Drums/*.json` into the user data directory before replacing program files.
-- Full Setup remains a fallback/first-install asset; normal upgrades use `ProjectAlpha-Update-from-vA-to-vB.zip`.
+- Full Setup remains a fallback/first-install asset; normal upgrades use one `ProjectAlpha-Update-from-vA-to-vB.exe`.
 
 - First production delta release is verified: `v0.3.0 -> v0.3.1`.
   - update asset: `ProjectAlpha-Update-from-v0.3.0-to-v0.3.1.zip`;
@@ -42,3 +42,7 @@ Updated: 2026-10-01 19:26 MSK
   - release workflow completed successfully;
   - Repository Hygiene completed successfully and removed the older release.
 - The current release contains the delta ZIP as the normal upgrade path, a small exact publish manifest for the next delta, and a full Setup only as first-install/recovery fallback.
+
+- Update packaging policy changed by owner directive: normal updates must be a single EXE, never a ZIP/CMD bundle.
+- Release pipeline now builds a temporary delta directory, smoke-tests it against a reconstructed previous publish, then embeds manifest + payload + updater into one Inno Setup self-extracting update EXE.
+- No update ZIP, CMD, standalone PowerShell, or standalone publish manifest is intended to be published from v0.3.2 onward.
