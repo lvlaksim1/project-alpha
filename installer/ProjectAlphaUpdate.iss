@@ -76,13 +76,17 @@ var
   PowerShellExe: String;
   ScriptPath: String;
   ErrorPath: String;
-  ErrorText: AnsiString;
+  ErrorBytes: AnsiString;
+  ErrorMessage: String;
 begin
   if CurStep = ssPostInstall then
   begin
     PowerShellExe := ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe');
     ScriptPath := ExpandConstant('{tmp}\ProjectAlphaUpdate\Apply-Update.ps1');
-    ErrorPath := ExpandConstant('{tmp}\ProjectAlphaUpdate\update-error.txt');
+    ErrorPath := ExpandConstant('{tmp}\ProjectAlphaUpdate-error.txt');
+
+    if FileExists(ErrorPath) then
+      DeleteFile(ErrorPath);
 
     if not Exec(
       PowerShellExe,
@@ -96,10 +100,19 @@ begin
 
     if ResultCode <> 0 then
     begin
-      if LoadStringFromFile(ErrorPath, ErrorText) then
-        RaiseException('Обновление не применено.' + #13#10 + String(ErrorText))
+      if LoadStringFromFile(ErrorPath, ErrorBytes) then
+      begin
+        ErrorMessage := UTF8Decode(ErrorBytes);
+        RaiseException('Обновление не применено.' + #13#10 + ErrorMessage);
+      end
       else
-        RaiseException('Обновление не применено. Код ошибки: ' + IntToStr(ResultCode));
+        RaiseException(
+          'Обновление не применено, а диагностический файл не был создан.' +
+          #13#10 + 'Код процесса обновления: ' + IntToStr(ResultCode)
+        );
     end;
+
+    if FileExists(ErrorPath) then
+      DeleteFile(ErrorPath);
   end;
 end;
