@@ -35,6 +35,7 @@ jobs:
         run: |
           [scriptblock]::Create((Get-Content .\scripts\create-publish-manifest.ps1 -Raw)) | Out-Null
           [scriptblock]::Create((Get-Content .\scripts\build-delta-update.ps1 -Raw)) | Out-Null
+          [scriptblock]::Create((Get-Content .\scripts\build-cumulative-repair.ps1 -Raw)) | Out-Null
           [scriptblock]::Create((Get-Content .\scripts\update\Apply-Update.ps1 -Raw)) | Out-Null
       - name: Restore
         run: dotnet restore Baraban/Baraban.csproj
