@@ -25,6 +25,10 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        var version = typeof(MainWindow).Assembly.GetName().Version;
+        Title = version is null
+            ? "Baraban"
+            : $"Baraban v{version.Major}.{version.Minor}.{version.Build}";
         _session = _sessionStore.Load();
         Loaded += MainWindow_Loaded;
     }
