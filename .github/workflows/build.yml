@@ -3,10 +3,22 @@ name: Build
 on:
   push:
     branches: [ main ]
+    paths:
+      - 'Baraban/**'
+      - 'Baraban.sln'
+      - '.github/workflows/build.yml'
   pull_request:
+    paths:
+      - 'Baraban/**'
+      - 'Baraban.sln'
+      - '.github/workflows/build.yml'
 
 permissions:
   contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
