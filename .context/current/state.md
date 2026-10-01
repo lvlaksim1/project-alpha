@@ -54,3 +54,12 @@ Updated: 2026-10-01 19:26 MSK
   - release workflow and Repository Hygiene both completed successfully;
   - the build and release runs created no GitHub Actions artifacts;
   - current release exposes only two executable assets: normal Update EXE and fallback full Setup EXE.
+
+- Uninstall policy updated:
+  - application files: `%LOCALAPPDATA%\Programs\Project Alpha`;
+  - user/session/work data: `%LOCALAPPDATA%\Baraban`;
+  - interactive uninstall asks `Удалить также настройки и рабочие данные?`;
+  - No preserves the entire user-data directory;
+  - Yes deletes it after application uninstall;
+  - silent uninstall preserves user data.
+- Incremental update installer now shares the application's fixed Inno AppId and carries the full uninstall code so normal small updates also refresh the installed uninstaller.

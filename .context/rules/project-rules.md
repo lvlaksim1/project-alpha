@@ -24,3 +24,9 @@
 - Each release may retain a full Setup only as first-install/recovery fallback. The user-facing normal update is exactly one matching `ProjectAlpha-Update-from-vA-to-vB.exe`.
 - No ZIP/CMD/PS1 or standalone manifest is published for normal updates. Internal manifest/payload/updater files are embedded inside the single update EXE and exist only temporarily on the CI runner.
 - Update EXE must be smoke-tested against a reconstructed copy of the previous published version before it is published.
+
+- Normal uninstall must remove the installed application under `%LOCALAPPDATA%\Programs\Project Alpha` while preserving `%LOCALAPPDATA%\Baraban` by default.
+- Interactive uninstall must ask exactly: `Удалить также настройки и рабочие данные?`
+- Only an explicit Yes may remove `%LOCALAPPDATA%\Baraban`.
+- Silent/service uninstall must preserve user data.
+- Incremental Update EXE must share the fixed application AppId so the latest uninstall code is appended to the same Inno uninstall log rather than creating a second installed application.

@@ -1,6 +1,6 @@
 # Next actions
 
-1. Validate first single-file incremental update v0.3.1 -> v0.3.2 and use its EXE as the default user-facing update.
+1. Release and verify v0.3.2 -> v0.3.3 as a single Update EXE, including same-AppId uninstall-log update and silent-uninstall data preservation.
 2. On Windows, import a real ZIP produced by the recorder extension through the Session tab.
 3. Verify import summary counts for cookies, request profiles, localStorage and sessionStorage.
 4. Navigate WebView2 to the captured origin and verify the restored authenticated state.
