@@ -87,3 +87,14 @@ Updated: 2026-10-01 19:26 MSK
   - the user no longer needs to install intermediate updates;
   - failures write a detailed reason that the Inno wrapper displays to the user.
 - New user-facing naming is `ProjectAlpha-Update-to-vX.Y.Z.exe`, because one update EXE supports multiple source versions.
+
+- Cumulative updater v0.3.4 is verified end-to-end.
+  - single user-facing asset: `ProjectAlpha-Update-to-v0.3.4.exe`;
+  - size: 2,205,274 bytes (~2.1 MB);
+  - CI discovered supported installed bases automatically from Git history: v0.3.0, v0.3.1, v0.3.2, v0.3.3;
+  - CI reconstructed each historical publish and successfully updated every base directly to v0.3.4;
+  - cumulative Update EXE also passed same-AppId/uninstall-entry/silent-user-data-preservation checks;
+  - updater failures now surface the actual diagnostic reason instead of only numeric exit code 1;
+  - Release v0.3.4 contains only Update EXE and fallback full Setup EXE;
+  - no Actions artifacts were created;
+  - Repository Hygiene completed successfully after release.
