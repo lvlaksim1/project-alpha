@@ -48,10 +48,12 @@ public partial class MainWindow : Window
         }
     }
 
-    private string DrumsDirectory => Path.Combine(AppContext.BaseDirectory, "Drums");
+    private string BuiltInDrumsDirectory => Path.Combine(AppContext.BaseDirectory, "Drums");
+    private string DrumsDirectory => Path.Combine(_sessionStore.RootDirectory, "Drums");
 
     private void ReloadDrums()
     {
+        _drumRepository.SeedUserDirectory(BuiltInDrumsDirectory, DrumsDirectory);
         var drums = _drumRepository.Load(DrumsDirectory);
         DrumList.ItemsSource = drums;
         if (drums.Count > 0)

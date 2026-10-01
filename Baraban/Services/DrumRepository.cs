@@ -8,6 +8,20 @@ public sealed class DrumRepository
 {
     private readonly JsonSerializerOptions _json = new() { PropertyNameCaseInsensitive = true };
 
+    public void SeedUserDirectory(string builtInDirectory, string userDirectory)
+    {
+        Directory.CreateDirectory(userDirectory);
+        if (!Directory.Exists(builtInDirectory))
+            return;
+
+        foreach (var source in Directory.EnumerateFiles(builtInDirectory, "*.json", SearchOption.TopDirectoryOnly))
+        {
+            var destination = Path.Combine(userDirectory, Path.GetFileName(source));
+            if (!File.Exists(destination))
+                File.Copy(source, destination);
+        }
+    }
+
     public IReadOnlyList<DrumDefinition> Load(string directory)
     {
         Directory.CreateDirectory(directory);
