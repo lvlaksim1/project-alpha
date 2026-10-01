@@ -1,9 +1,26 @@
 # Manager beliefs
 
-Record current verified beliefs and explicit inferences about the project.
-
-Each durable belief must include at least:
-- statement;
-- `source:` where it came from;
-- `authority:` such as owner-directive, verified-repository, verified-ci, verified-runtime, trusted-external, or manager-inference;
-- whether it supersedes an older belief when applicable.
+- Baraban is a multi-drum Windows application, not an Alfa-only client.
+  - source: owner directive, 2026-09-30
+  - authority: owner-directive
+- Browser login and saved-session/manual import are both required authentication paths.
+  - source: owner directive, 2026-09-30
+  - authority: owner-directive
+- Cookies must persist for as long as the server accepts them; Baraban must not impose a shorter lifetime.
+  - source: owner directive, 2026-09-30
+  - authority: owner-directive
+- HTTP parameters must be inspectable and editable by the user.
+  - source: owner directive, 2026-09-30
+  - authority: owner-directive
+- The former Alfa Loyalty Roulette module must remain available only as an archive unless the owner later supplies more data.
+  - source: owner directive, 2026-09-30
+  - authority: owner-directive
+- The current Alfa-Friday capture verifies the request bodies for `getCustomerOffersDrum`, `getOfferDrums` and `confirmDrumOffer`; production JS independently verifies the state transitions using `available` and `offerWinId`.
+  - source: owner-supplied browser capture plus captured production bundle, 2026-09-30
+  - authority: verified-runtime
+- X-GIB security headers vary by endpoint/request in the captured session, so one global copied header set is not an adequate replay model.
+  - source: owner-supplied browser capture, 2026-09-30
+  - authority: verified-runtime
+- Commit `0f41ba66bafee1d2ee10fa7bd9487d42c527ddba` builds successfully on GitHub Actions Windows runner.
+  - source: workflow run 36653647639
+  - authority: verified-ci

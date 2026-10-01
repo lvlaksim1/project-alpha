@@ -1,0 +1,79 @@
+{
+  "id": "alfa-friday-tasty-coffee-2026-09-30",
+  "name": "Alfa-Пятница — Tasty Coffee (30.09.2026)",
+  "description": "Рабочий модуль, восстановленный по браузерной сессии 30.09.2026. offerId редактируемый; advertCampaignId, available и offerWinId извлекаются из ответов.",
+  "loginUrl": "https://link.alfabank.ru/partner-offers/friday/21898",
+  "archived": false,
+  "variables": {
+    "offerId": "21898",
+    "advertCampaignId": "",
+    "available": "[]",
+    "offerWinId": ""
+  },
+  "requests": [
+    {
+      "id": "getOfferById",
+      "name": "0. Получить карточку Alfa-Пятницы",
+      "method": "GET",
+      "url": "https://link.alfabank.ru/partner-offers/api/v1/offer/{{offerId}}",
+      "headers": {"Accept":"*/*","Referer":"https://link.alfabank.ru/partner-offers/friday/{{offerId}}"},
+      "body": "",
+      "captures": {"advertCampaignId":"$.drumId"},
+      "autoRun": true,
+      "isConfirmation": false
+    },
+    {
+      "id": "getAdvertCampaign",
+      "name": "Диагностика. getAdvertCampaign",
+      "method": "POST",
+      "url": "https://link.alfabank.ru/partner-offers/api/LoyaltyRouletteService/getAdvertCampaign",
+      "headers": {"Accept":"*/*","Content-Type":"application/json","Origin":"https://link.alfabank.ru","Referer":"https://link.alfabank.ru/partner-offers/friday/{{offerId}}"},
+      "body": "{}",
+      "captures": {},
+      "autoRun": false,
+      "isConfirmation": false
+    },
+    {
+      "id": "getCustomerOffersDrum",
+      "name": "1. Получить состояние барабана",
+      "method": "POST",
+      "url": "https://link.alfabank.ru/partner-offers/api/LoyaltyRouletteService/getCustomerOffersDrum",
+      "headers": {"Accept":"*/*","Content-Type":"application/json","Origin":"https://link.alfabank.ru","Referer":"https://link.alfabank.ru/partner-offers/friday/{{offerId}}"},
+      "body": "{\n  \"advertCampaignId\": {{advertCampaignId}}\n}",
+      "captures": {"available":"$.available","offerWinId":"$.offerWinId"},
+      "autoRun": true,
+      "isConfirmation": false
+    },
+    {
+      "id": "getOfferDrums",
+      "name": "2. Получить варианты призов",
+      "method": "POST",
+      "url": "https://link.alfabank.ru/partner-offers/api/LoyaltyRouletteService/getOfferDrums",
+      "headers": {"Accept":"*/*","Content-Type":"application/json","Origin":"https://link.alfabank.ru","Referer":"https://link.alfabank.ru/partner-offers/friday/{{offerId}}"},
+      "body": "{\n  \"offerDrumId\": {{available}}\n}",
+      "captures": {},
+      "autoRun": true,
+      "isConfirmation": false
+    },
+    {
+      "id": "confirmDrumOffer",
+      "name": "3. ПОДТВЕРДИТЬ выигрыш",
+      "method": "POST",
+      "url": "https://link.alfabank.ru/partner-offers/api/LoyaltyRouletteService/confirmDrumOffer",
+      "headers": {"Accept":"*/*","Content-Type":"application/json","Origin":"https://link.alfabank.ru","Referer":"https://link.alfabank.ru/partner-offers/friday/{{offerId}}"},
+      "body": "{\n  \"advertCampaignId\": {{advertCampaignId}},\n  \"offerWinId\": {{offerWinId}}\n}",
+      "captures": {},
+      "autoRun": false,
+      "isConfirmation": true
+    }
+  ],
+  "result": {
+    "sourceRequestId": "getOfferDrums",
+    "itemsPath": "$",
+    "drumIdPath": "offerDrumId",
+    "offerIdPath": "offerId",
+    "titlePaths": ["discountName","discountDescription","moreDescription","name"],
+    "winnerVariable": "offerWinId",
+    "requireOfferId": true
+  }
+}

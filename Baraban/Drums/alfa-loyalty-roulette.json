@@ -1,0 +1,55 @@
+{
+  "id": "alfa-loyalty-roulette",
+  "name": "Alfa — Loyalty Roulette (снимок 17.09.2026)",
+  "description": "Архивный первый модуль. Сохранён для истории и возможного возврата к исследованию; не считается актуальным рабочим барабаном.",
+  "loginUrl": "https://link.alfabank.ru/partner-offers/",
+  "archived": true,
+  "variables": {
+    "advertCampaignId": "",
+    "offerWinId": ""
+  },
+  "requests": [
+    {
+      "id": "getCustomerOffersDrum",
+      "name": "1. getCustomerOffersDrum",
+      "method": "POST",
+      "url": "https://link.alfabank.ru/partner-offers/api/LoyaltyRouletteService/getCustomerOffersDrum",
+      "headers": {"Accept":"*/*","Content-Type":"application/json","Origin":"https://link.alfabank.ru","Referer":"https://link.alfabank.ru/partner-offers/"},
+      "body": "{\n  \"advertCampaignId\": {{advertCampaignId}}\n}",
+      "captures": {"offerWinId":"$.offerWinId"},
+      "autoRun": false,
+      "isConfirmation": false
+    },
+    {
+      "id": "getOfferDrums",
+      "name": "2. getOfferDrums",
+      "method": "POST",
+      "url": "https://link.alfabank.ru/partner-offers/api/LoyaltyRouletteService/getOfferDrums",
+      "headers": {"Accept":"*/*","Content-Type":"application/json","Origin":"https://link.alfabank.ru","Referer":"https://link.alfabank.ru/partner-offers/"},
+      "body": "{\n  \"advertCampaignId\": {{advertCampaignId}}\n}",
+      "captures": {},
+      "autoRun": false,
+      "isConfirmation": false
+    },
+    {
+      "id": "confirmDrumOffer",
+      "name": "3. confirmDrumOffer (подтверждение)",
+      "method": "POST",
+      "url": "https://link.alfabank.ru/partner-offers/api/LoyaltyRouletteService/confirmDrumOffer",
+      "headers": {"Accept":"*/*","Content-Type":"application/json","Origin":"https://link.alfabank.ru","Referer":"https://link.alfabank.ru/partner-offers/"},
+      "body": "{\n  \"advertCampaignId\": {{advertCampaignId}},\n  \"offerWinId\": {{offerWinId}}\n}",
+      "captures": {},
+      "autoRun": false,
+      "isConfirmation": true
+    }
+  ],
+  "result": {
+    "sourceRequestId": "getOfferDrums",
+    "itemsPath": "$",
+    "drumIdPath": "offerDrumId",
+    "offerIdPath": "offerId",
+    "titlePaths": ["discountName","moreDescription"],
+    "winnerVariable": "offerWinId",
+    "requireOfferId": true
+  }
+}
