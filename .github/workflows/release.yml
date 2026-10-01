@@ -41,6 +41,11 @@ jobs:
           [scriptblock]::Create((Get-Content .\scripts\build-cumulative-repair.ps1 -Raw)) | Out-Null
           [scriptblock]::Create((Get-Content .\scripts\update\Apply-Update.ps1 -Raw)) | Out-Null
 
+      - name: Validate updater in Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          [scriptblock]::Create((Get-Content .\scripts\update\Apply-Update.ps1 -Raw)) | Out-Null
+
       - name: Publish current self-contained Windows x64
         shell: pwsh
         run: |
