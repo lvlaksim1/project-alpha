@@ -1,4 +1,4 @@
-name: Release Windows
+name: Release Windows Installer
 
 on:
   push:
@@ -27,6 +27,9 @@ jobs:
         shell: pwsh
         run: |
           $version = (Get-Content release/VERSION -Raw).Trim()
+          if ($version -notmatch '^\d+\.\d+\.\d+$') {
+            throw "release/VERSION must be semantic numeric X.Y.Z"
+          }
           "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Publish self-contained Windows x64
@@ -35,22 +38,50 @@ jobs:
           dotnet restore Baraban/Baraban.csproj -r win-x64
           dotnet publish Baraban/Baraban.csproj -c Release -r win-x64 --self-contained true --no-restore -p:DebugType=None -p:DebugSymbols=false -o publish
 
-      - name: Package
+      - name: Install Inno Setup compiler
         shell: pwsh
         run: |
-          $zip = "ProjectAlpha-v$env:VERSION-win-x64.zip"
-          if (Test-Path $zip) { Remove-Item $zip -Force }
-          Compress-Archive -Path publish\* -DestinationPath $zip -CompressionLevel Optimal
-          "ASSET=$zip" | Out-File -FilePath $env:GITHUB_ENV -Append
+          choco install innosetup -y --no-progress
 
-      - name: Create or update GitHub Release
+      - name: Build installer
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force release-output | Out-Null
+
+          $candidates = @(
+            "${env:ProgramFiles}\Inno Setup 7\ISCC.exe",
+            "${env:ProgramFiles(x86)}\Inno Setup 7\ISCC.exe",
+            "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          )
+          $iscc = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $iscc) {
+            throw "ISCC.exe was not found after Inno Setup installation"
+          }
+
+          $source = (Resolve-Path publish).Path
+          $output = (Resolve-Path release-output).Path
+
+          & $iscc             "/DMyAppVersion=$env:VERSION"             "/DSourceDir=$source"             "/DOutputDir=$output"             "installer\ProjectAlpha.iss"
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Inno Setup compilation failed with exit code $LASTEXITCODE"
+          }
+
+          $installer = Get-ChildItem release-output -Filter "ProjectAlpha-Setup-v$env:VERSION-win-x64.exe" | Select-Object -First 1
+          if (-not $installer) {
+            throw "Installer output was not found"
+          }
+
+          "ASSET=$($installer.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Publish installer directly to GitHub Release
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $tag = "v$env:VERSION"
-          if (gh release view $tag 2>$null) {
-            gh release upload $tag $env:ASSET --clobber
+          if (gh release view $tag --repo $env:GITHUB_REPOSITORY 2>$null) {
+            gh release upload $tag $env:ASSET --repo $env:GITHUB_REPOSITORY --clobber
           } else {
-            gh release create $tag $env:ASSET --target $env:GITHUB_SHA --title "Project Alpha $tag" --notes "Windows x64 self-contained build."
+            gh release create $tag $env:ASSET --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --title "Project Alpha $tag" --notes "Windows x64 installer."
           }
