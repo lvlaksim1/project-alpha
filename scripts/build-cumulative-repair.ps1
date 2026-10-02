@@ -55,7 +55,6 @@ if ($bases.Count -eq 0) {
 }
 
 $baseMaps = @{}
-$mutableChangedCounts = @{}
 $deleteSet = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
 
 foreach ($base in $bases) {
@@ -75,18 +74,6 @@ foreach ($base in $bases) {
         }
     }
 
-    foreach ($entry in @($delta.files)) {
-        if (-not [bool]$entry.mutable) { continue }
-
-        $path = Normalize-Path ([string]$entry.path)
-        if (-not $targetAll.ContainsKey($path)) { continue }
-
-        if (-not $mutableChangedCounts.ContainsKey($path)) {
-            $mutableChangedCounts[$path] = 0
-        }
-        $mutableChangedCounts[$path] = [int]$mutableChangedCounts[$path] + 1
-    }
-
     $baseMaps[[string]$base.version] = $map
 }
 
@@ -101,15 +88,15 @@ foreach ($path in $target.Keys) {
     }
 }
 
-# Mutable files are normally preserved. A mutable target file is safe to seed
-# only when every supported base delta reports it as new/changed; this means
-# the file did not exist in any supported released base (for example a newly
-# introduced built-in drum module). Existing user-editable drum files remain untouched.
-foreach ($path in $mutableChangedCounts.Keys) {
-    if ([int]$mutableChangedCounts[$path] -eq $bases.Count) {
-        [void]$repairPaths.Add($path)
-    }
-}
+# Mutable target files are packaged separately as seed-if-missing files.
+# Repair mode may add them when absent, but must never overwrite an existing
+# user-editable file.
+$seedIfMissing = @(
+    $targetAll.Keys |
+        Where-Object { [bool]$targetAll[$_].mutable } |
+        Sort-Object |
+        ForEach-Object { $targetAll[$_] }
+)
 
 $repairRoot = Join-Path $OutputDirectory "repair"
 if (Test-Path -LiteralPath $repairRoot) {
@@ -131,22 +118,39 @@ foreach ($path in @($repairPaths | Sort-Object)) {
     $repairFiles += $entry
 }
 
+foreach ($entry in $seedIfMissing) {
+    $path = [string]$entry.path
+    $source = Join-Path $CurrentPublishDir ($path.Replace("/", "\"))
+    if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
+        throw "Target publish seed file missing: $path"
+    }
+    $destination = Join-Path $payloadRoot ($path.Replace("/", "\"))
+    if (-not (Test-Path -LiteralPath $destination -PathType Leaf)) {
+        New-Item -ItemType Directory -Path (Split-Path -Parent $destination) -Force | Out-Null
+        Copy-Item -LiteralPath $source -Destination $destination -Force
+    }
+}
+
 $repairManifest = [ordered]@{
     schema = "project-alpha-repair-v1"
     targetTag = $TargetTag
     supportedVersions = @($bases | ForEach-Object { [string]$_.version })
     files = $repairFiles
+    seedIfMissing = $seedIfMissing
     delete = @($deleteSet | Sort-Object)
 }
 
 $repairManifest | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $repairRoot "repair-manifest.json") -Encoding UTF8
 Copy-Item -LiteralPath $TargetManifestPath -Destination (Join-Path $OutputDirectory "target-manifest.json") -Force
 
-$payloadBytes = ($repairFiles | Measure-Object -Property size -Sum).Sum
-if ($null -eq $payloadBytes) { $payloadBytes = 0 }
+$repairBytes = ($repairFiles | Measure-Object -Property size -Sum).Sum
+if ($null -eq $repairBytes) { $repairBytes = 0 }
+$seedBytes = ($seedIfMissing | Measure-Object -Property size -Sum).Sum
+if ($null -eq $seedBytes) { $seedBytes = 0 }
 
 Write-Host "Safe repair bridge for $TargetTag"
 Write-Host "Supported versions: $((@($repairManifest.supportedVersions)) -join ', ')"
 Write-Host "Repair files: $($repairFiles.Count)"
+Write-Host "Seed-if-missing files: $($seedIfMissing.Count)"
 Write-Host "Repair delete paths: $($deleteSet.Count)"
-Write-Host "Repair payload bytes: $payloadBytes"
+Write-Host "Repair payload bytes: $($repairBytes + $seedBytes)"
