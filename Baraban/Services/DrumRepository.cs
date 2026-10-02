@@ -26,6 +26,15 @@ public sealed class DrumRepository
 
     private void MigrateKnownModuleCorrections(string userDirectory)
     {
+        MigrateTerminalRetryModule(
+            userDirectory,
+            "alfa-online-podruzhka-wheel-2026-10.json",
+            "alfa-online-podruzhka-wheel-2026-10");
+        MigrateTerminalRetryModule(
+            userDirectory,
+            "alfa-online-mvideo-wheel-2026-10-02.json",
+            "alfa-online-mvideo-wheel-2026-10-02");
+
         var path = Path.Combine(userDirectory, "alfa-online-supercashback-wheel-2026-10.json");
         if (!File.Exists(path))
             return;
@@ -177,6 +186,51 @@ public sealed class DrumRepository
         catch
         {
             // Never block application startup because of a migration attempt.
+        }
+    }
+
+
+    private void MigrateTerminalRetryModule(string userDirectory, string fileName, string moduleId)
+    {
+        var path = Path.Combine(userDirectory, fileName);
+        if (!File.Exists(path))
+            return;
+
+        try
+        {
+            var definition = JsonSerializer.Deserialize<DrumDefinition>(File.ReadAllText(path), _json);
+            if (definition is null ||
+                !definition.Id.Equals(moduleId, StringComparison.OrdinalIgnoreCase))
+                return;
+
+            definition.Actions ??= new DrumActionMapping();
+            var changed = false;
+
+            if (!definition.Actions.AllowClaimAfterTerminal)
+            {
+                definition.Actions.AllowClaimAfterTerminal = true;
+                changed = true;
+            }
+
+            if (!definition.Actions.TerminalRetryLabel.Equals("Повторить PUT /accept", StringComparison.Ordinal))
+            {
+                definition.Actions.TerminalRetryLabel = "Повторить PUT /accept";
+                changed = true;
+            }
+
+            if (!changed)
+                return;
+
+            var writeOptions = new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            };
+            File.WriteAllText(path, JsonSerializer.Serialize(definition, writeOptions));
+        }
+        catch
+        {
+            // A migration must never block application startup.
         }
     }
 
