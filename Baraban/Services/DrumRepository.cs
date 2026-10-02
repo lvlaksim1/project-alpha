@@ -89,11 +89,31 @@ public sealed class DrumRepository
                 changed = true;
             }
 
-            changed |= SetIfDifferent(ref actions.ClaimLabelVariable, "wheelActionTitle");
-            changed |= SetIfDifferent(ref actions.RepeatTitleVariable, "reconfirmTitle");
-            changed |= SetIfDifferent(ref actions.RepeatSubtitleVariable, "reconfirmSubtitle");
-            changed |= SetIfDifferent(ref actions.RepeatNeedPaidVariable, "reconfirmNeedPaid");
-            changed |= SetIfDifferent(ref actions.MotivationVariable, "motivationTitle");
+            if (!actions.ClaimLabelVariable.Equals("wheelActionTitle", StringComparison.Ordinal))
+            {
+                actions.ClaimLabelVariable = "wheelActionTitle";
+                changed = true;
+            }
+            if (!actions.RepeatTitleVariable.Equals("reconfirmTitle", StringComparison.Ordinal))
+            {
+                actions.RepeatTitleVariable = "reconfirmTitle";
+                changed = true;
+            }
+            if (!actions.RepeatSubtitleVariable.Equals("reconfirmSubtitle", StringComparison.Ordinal))
+            {
+                actions.RepeatSubtitleVariable = "reconfirmSubtitle";
+                changed = true;
+            }
+            if (!actions.RepeatNeedPaidVariable.Equals("reconfirmNeedPaid", StringComparison.Ordinal))
+            {
+                actions.RepeatNeedPaidVariable = "reconfirmNeedPaid";
+                changed = true;
+            }
+            if (!actions.MotivationVariable.Equals("motivationTitle", StringComparison.Ordinal))
+            {
+                actions.MotivationVariable = "motivationTitle";
+                changed = true;
+            }
 
             if (!changed)
                 return;
@@ -127,15 +147,6 @@ public sealed class DrumRepository
             return false;
 
         request.Captures[name] = path;
-        return true;
-    }
-
-    private static bool SetIfDifferent(ref string target, string value)
-    {
-        if (target.Equals(value, StringComparison.Ordinal))
-            return false;
-
-        target = value;
         return true;
     }
 
