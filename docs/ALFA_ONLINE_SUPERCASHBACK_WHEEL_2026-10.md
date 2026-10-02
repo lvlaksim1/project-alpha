@@ -214,3 +214,43 @@ and passes `reconfirmButton.modalView.order` as the request body. After successf
 Both observed `PUT /accept` requests used the same URL and body but different dynamic `X-GIB-FGSSCw-alfabank-retail` values. The stable `X-GIB-GSSCw-alfabank-retail`, `X-XSRF-TOKEN`, `DEVICE-APP-ID`, screen dimension and zone offset remained the same in the capture.
 
 This confirms that dynamic X-GIB values are occurrence-specific evidence and must not be treated as a durable global token.
+
+
+## Paid reroll runtime capture (02.10.2026 06:11 MSK)
+
+Owner capture `Browser-Network-20261002-061155.zip` records the paid-repeat path end to end.
+
+Observed chronology:
+
+1. Existing confirmed wheel state is loaded with a dedicated winner GET. The current winner is the previous **Такси — 7%** result and the response advertises **«Крутить ещё — за 49 ₽»**.
+2. The user presses **«Крутить ещё — за 49 ₽»**.
+3. The site opens a payment modal and the user presses **«Подтвердить»**.
+4. Browser sends:
+   `POST /api/v1/loyalty-view/offer`
+   with the exact `reconfirmButton.modalView.order` object previously supplied by the server.
+5. The response is HTTP 200 with:
+   - `type="buy-offer"`;
+   - `direction="EXPENSE"`;
+   - `success=true`;
+   - amount 49 RUR;
+   - button title **«Крутить скорее!»**.
+6. The next **«Крутить скорее!»** click triggers a fresh
+   `GET /wheel-of-fortune?basketOfferId=21871`, preparing the paid attempt.
+7. The following **«Крутить скорее!»** click sends the normal
+   `PUT /api/v1/loyalty-view/accept`.
+8. That paid spin returned:
+   - `winnerOffer.id=21931`;
+   - **Аптеки — 7%**.
+9. The winner response again contains a paid repeat offer, proving the paid cycle can be offered repeatedly.
+
+### Implementation rule
+
+Project Alpha never hard-codes the account-specific payment order. It captures the complete `reconfirmButton.modalView.order` JSON from the server into runtime state and submits that exact object to `POST /loyalty-view/offer` only after explicit user confirmation.
+
+After HTTP 2xx the program also requires `success=true` before marking the repeat as paid.
+
+The payment step and the wheel reset are kept as separate logical transitions. This prevents a failed GET after a successful payment from causing an automatic second POST/payment retry.
+
+### Security-header evidence
+
+The paid POST has its own request-specific dynamic Group-IB header value. The subsequent GET and PUT carry different dynamic values again. Therefore imported request profiles may provide evidence for the endpoint, but freshness of dynamic Group-IB values cannot be assumed.
