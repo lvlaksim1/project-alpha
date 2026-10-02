@@ -1,7 +1,7 @@
 {
   "id": "alfa-online-supercashback-wheel-2026-10",
   "name": "Альфа-Онлайн — Суперкэшбэк (октябрь 2026)",
-  "description": "Модуль барабана Альфа-Онлайн по capture 02.10.2026. GET wheel-of-fortune возвращает варианты. PUT /accept выбирает winnerOffer. После первого выигрыша сервер предлагает бесплатную повторную попытку; повторная кнопка сначала обновляет wheel GET, затем пользователь снова запускает PUT /accept. После второй прокрутки сервер предложил следующую попытку за 49 ₽.",
+  "description": "Модуль барабана Альфа-Онлайн по полным capture 02.10.2026. GET wheel-of-fortune возвращает варианты; PUT /accept выбирает winnerOffer; бесплатный повтор — GET reset; платный повтор — POST /offer с order из reconfirmButton.modalView.order, затем GET reset и новый явный PUT /accept.",
   "loginUrl": "https://web.alfabank.ru/marketplace/?loyaltyType=104",
   "archived": false,
   "variables": {
@@ -12,7 +12,9 @@
     "reconfirmTitle": "",
     "reconfirmSubtitle": "",
     "reconfirmNeedPaid": "",
-    "motivationTitle": ""
+    "motivationTitle": "",
+    "paidRepeatOrder": "",
+    "paidRepeatPurchased": "false"
   },
   "requests": [
     {
@@ -45,7 +47,12 @@
       },
       "body": "",
       "captures": {
-        "winnerOfferId": "$.winnerOffer.id"
+        "winnerOfferId": "$.winnerOffer.id",
+        "reconfirmTitle": "$.reconfirmButton.title",
+        "reconfirmSubtitle": "$.reconfirmButton.subtitle",
+        "reconfirmNeedPaid": "$.reconfirmButton.needPaid",
+        "motivationTitle": "$.motivation.title",
+        "paidRepeatOrder": "$.reconfirmButton.modalView.order"
       },
       "autoRun": false,
       "isConfirmation": false
@@ -68,7 +75,27 @@
         "reconfirmTitle": "$.reconfirmButton.title",
         "reconfirmSubtitle": "$.reconfirmButton.subtitle",
         "reconfirmNeedPaid": "$.reconfirmButton.needPaid",
-        "motivationTitle": "$.motivation.title"
+        "motivationTitle": "$.motivation.title",
+        "paidRepeatOrder": "$.reconfirmButton.modalView.order"
+      },
+      "autoRun": false,
+      "isConfirmation": true
+    },
+    {
+      "id": "buyWheelRepeat",
+      "name": "ОПЛАТИТЬ повторную попытку барабана",
+      "method": "POST",
+      "url": "https://web.alfabank.ru/api/v1/loyalty-view/offer",
+      "headers": {
+        "Accept": "application/json, text/plain, */*",
+        "Content-Type": "application/json",
+        "Origin": "https://web.alfabank.ru",
+        "Referer": "https://web.alfabank.ru/marketplace/?loyaltyType=104",
+        "X-SCREEN-DIMENSION": "desktop"
+      },
+      "body": "{{paidRepeatOrder}}",
+      "captures": {
+        "wheelActionTitle": "$.button.title"
       },
       "autoRun": false,
       "isConfirmation": true
@@ -112,7 +139,14 @@
     "repeatTitleVariable": "reconfirmTitle",
     "repeatSubtitleVariable": "reconfirmSubtitle",
     "repeatNeedPaidVariable": "reconfirmNeedPaid",
-    "motivationVariable": "motivationTitle"
+    "motivationVariable": "motivationTitle",
+    "paidRepeat": [
+      {
+        "requestId": "buyWheelRepeat"
+      }
+    ],
+    "paidRepeatOrderVariable": "paidRepeatOrder",
+    "paidRepeatPurchasedVariable": "paidRepeatPurchased"
   },
   "result": {
     "sourceRequestId": "getWheelOfFortune",
