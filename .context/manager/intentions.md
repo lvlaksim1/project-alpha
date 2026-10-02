@@ -1,6 +1,7 @@
 # Manager intentions and commitments
 
 ## Completed
+- Analyze the full 05:45 Alfa Online capture with two real spins and the free reroll; replace the incorrect `isWinner` assumption with authoritative `winnerOffer.id`, implement the observed `Крутить скорее! → Крутить ещё → Крутить скорее!` state machine, and release it as v0.3.12.
 - Analyze the owner-provided 02.10.2026 Alfa Online capture, identify the distinct `v1/loyalty-view` wheel mechanism, generalize the three UI actions to per-drum pipelines, add the `alfa-online-supercashback-wheel-2026-10` module, and release the finalized support as v0.3.10.
 - Analyze the owner-supplied Alfa Online Network Recorder capture and implement multi-mechanism drum support through generic per-module action pipelines; add the `alfa-online-supercashback-wheel-2026-10` module and release the implementation as v0.3.10.
 - Harden multi-domain session handling with host-scoped reusable headers and keep dynamic security headers request-specific.
@@ -24,7 +25,7 @@
 - Enforce minimal GitHub storage / no Actions-artifact policy.
 
 ## Active
-- Obtain owner-side confirmation of v0.3.10 on the real installation, including the new Alfa Online prize list/state flow and, only if intentionally requested by the owner, the explicit claim/spin action.
+- Obtain owner-side confirmation of v0.3.12 on the real installation, including first spin winner mapping, free repeat preparation, second spin replacement, and paid-repeat detection without automatic payment.
 - Live-verify recorder ZIP session restoration on Windows.
 - Live-verify the current Alfa-Friday non-mutating request chain from Project Alpha.
 - Preserve multi-drum modularity and explicit confirmation semantics in all future changes.
