@@ -150,3 +150,67 @@ and again renders the final screen from the returned `winnerOffer` object.
 Project Alpha's internal variable `winnerOfferId` therefore means **the value of `$.winnerOffer.id`**. It is expected to remain empty before the spin/claim request and before a confirmed-winner GET succeeds.
 
 The `isWinner` fallback introduced in v0.3.10 was removed after re-checking the capture and production code.
+
+
+## Full two-spin runtime capture (02.10.2026 05:45 MSK)
+
+A later owner capture `Browser-Network-20261002-054552.zip` contains the missing real click sequence.
+
+Observed chronology:
+
+1. Open card **«Получите суперкэшбэк — На октябрь»**.
+2. `GET /api/v1/loyalty-view/wheel-of-fortune?basketOfferId=21871`
+   - `confirmed=false`
+   - all ten `offers[].isWinner=false`
+   - action: **«Крутить скорее!»**
+3. Click **«Крутить скорее!»**.
+4. `PUT /api/v1/loyalty-view/accept`
+   body:
+   ```json
+   {"basketOfferId":"21871","type":"DRUM"}
+   ```
+   response winner:
+   - `winnerOffer.id=21937`
+   - `winnerOffer.partner="Цифровые товары"`
+   - `winnerOffer.discount="7%"`
+   - `winnerOffer.isWinner=false`
+   response also contains:
+   - motivation: **«Сегодня можете крутить ещё раз, но забрать прошлый выигрыш не получится»**
+   - `reconfirmButton.title="Крутить ещё"`
+   - `reconfirmButton.needPaid=false`
+   - `reconfirmButton.subtitle="1 попытка"`
+5. Click **«Крутить ещё — 1 попытка»**.
+6. The browser does **not** call a special reconfirm mutation. It refreshes the wheel with another
+   `GET /wheel-of-fortune?basketOfferId=21871`.
+   That response now has `confirmed=true`, but all `offers[].isWinner` are still false.
+7. The UI returns to **«Крутить скорее!»**.
+8. Click **«Крутить скорее!»** again.
+9. A second identical `PUT /accept` selects a new winner:
+   - `winnerOffer.id=21940`
+   - `winnerOffer.partner="Такси"`
+   - `winnerOffer.discount="7%"`
+10. The second response advertises another repeat, now paid:
+    - `reconfirmButton.needPaid=true`
+    - `reconfirmButton.subtitle="за 49 ₽"`
+    - `modalView.title="Крутить ещё за 49 ₽"`
+    - the modal contains a complete `order` object.
+
+Important consequences:
+
+- `offers[].isWinner` is not a winner authority even after both observed spins; it stayed false for every offer.
+- The authoritative winner is always the `winnerOffer` object returned by `PUT /accept` (or by the dedicated winner GET when loading an already-confirmed result).
+- The free **«Крутить ещё»** action is a reset/refresh step, not a second winner request by itself.
+- Starting a repeat forfeits the previous result, exactly as stated by the server motivation text.
+- The paid repeat purchase was **not clicked in the capture**.
+
+The captured production JavaScript maps `buyOffer` to:
+
+`POST /api/v1/loyalty-view/offer`
+
+and passes `reconfirmButton.modalView.order` as the request body. After successful payment the frontend resets the wheel again. Because that POST was not actually present in runtime traffic, Project Alpha detects and displays the paid repeat offer but does not submit the payment automatically yet.
+
+### Header evidence across repeated requests
+
+Both observed `PUT /accept` requests used the same URL and body but different dynamic `X-GIB-FGSSCw-alfabank-retail` values. The stable `X-GIB-GSSCw-alfabank-retail`, `X-XSRF-TOKEN`, `DEVICE-APP-ID`, screen dimension and zone offset remained the same in the capture.
+
+This confirms that dynamic X-GIB values are occurrence-specific evidence and must not be treated as a durable global token.
