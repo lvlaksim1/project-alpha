@@ -286,6 +286,7 @@ public sealed class CaptureZipImporter(SessionStore store)
     private static bool IsReusableGlobalHeader(string header) =>
         header.Equals("Authorization", StringComparison.OrdinalIgnoreCase)
         || header.Equals("X-CSRF-Token", StringComparison.OrdinalIgnoreCase)
+        || header.Equals("X-XSRF-TOKEN", StringComparison.OrdinalIgnoreCase)
         || header.Equals("Accept-Language", StringComparison.OrdinalIgnoreCase)
         || header.Equals("User-Agent", StringComparison.OrdinalIgnoreCase);
 
