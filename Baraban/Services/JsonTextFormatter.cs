@@ -1,9 +1,11 @@
+using System.Globalization;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace Baraban.Services;
 
-public static class JsonTextFormatter
+public static partial class JsonTextFormatter
 {
     public static JsonSerializerOptions PrettyOptions { get; } = new()
     {
@@ -32,18 +34,13 @@ public static class JsonTextFormatter
         if (string.IsNullOrEmpty(text) || !text.Contains("\\u", StringComparison.OrdinalIgnoreCase))
             return text;
 
-        try
+        return UnicodeEscapeRegex().Replace(text, match =>
         {
-            var wrapped = "\"" + text
-                .Replace("\\", "\\\\")
-                .Replace("\"", "\\\"")
-                .Replace("\\u", "__UNICODE_ESCAPE__", StringComparison.OrdinalIgnoreCase)
-                .Replace("__UNICODE_ESCAPE__", "\\u") + "\"";
-            return JsonSerializer.Deserialize<string>(wrapped) ?? text;
-        }
-        catch
-        {
-            return text;
-        }
+            var value = int.Parse(match.Groups[1].Value, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+            return char.ConvertFromUtf32(value);
+        });
     }
+
+    [GeneratedRegex(@"\\u([0-9a-fA-F]{4})", RegexOptions.CultureInvariant)]
+    private static partial Regex UnicodeEscapeRegex();
 }
