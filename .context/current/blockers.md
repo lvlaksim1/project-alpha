@@ -1,13 +1,9 @@
 # Current blockers and open risks
 
-1. Full browser-session ZIP restoration still needs end-to-end runtime verification on the owner's Windows machine with a fresh recorder export.
+1. Full browser-session ZIP restoration still needs end-to-end runtime verification on the owner's Windows machine with the new full Alfa Online capture.
 2. IndexedDB and Cache Storage are not restored. Add them only if live testing proves they are required for session continuity.
-3. Captured request-specific dynamic security headers may have server-defined freshness/replay limits. Do not attempt to synthesize or bypass them; prefer fresh WebView2-observed traffic when imported values are rejected.
-4. Current Alfa-Friday module still needs live non-mutating workflow verification inside Project Alpha after session restoration.
-5. Confirmation/mutating requests must remain explicit and separated from discovery/visualization.
-
-6. The new Alfa Online non-mutating wheel GET is capture-verified, but the actual spin/claim request was not present in the supplied capture. The `PUT /api/v1/loyalty-view/accept` + `type: DRUM` path is grounded in captured production JavaScript and the active feature flag, but still requires owner-side runtime verification.
-7. The new cabinet may require fresh endpoint-specific security headers for winner/claim endpoints. Preserve the policy: replay only legitimately captured/observed values; if the direct claim is rejected, obtain a real browser capture of that endpoint rather than synthesizing protected headers.
-
-6. Alfa Online Supercashback runtime verification is pending on the owner's machine. The non-mutating `GET wheel-of-fortune` was directly observed in the supplied capture; the active `PUT /accept` claim contract is verified from captured production JavaScript but was not executed in that recording.
-7. Dynamic `X-GIB-...` security headers remain request-specific. The program may reuse stable same-host context such as XSRF/device/screen/time-zone headers, but must not synthesize or globally copy dynamic security headers. If the unobserved claim endpoint rejects the request, obtain runtime evidence rather than guessing.
+3. The full Alfa Online capture proves `X-GIB-FGSSCw-...` changes between identical repeated requests. Captured dynamic security headers may have server freshness/replay limits. Do not synthesize or bypass them; use fresh legitimate browser evidence if replay is rejected.
+4. Alfa Online free repeat is now capture-grounded and implemented, but the owner still needs to verify the two-step flow in Project Alpha on the real account.
+5. Paid repeat is only partially grounded: the response and production JS expose `POST /api/v1/loyalty-view/offer` plus the exact `modalView.order`, but the owner did not execute payment in the capture. Project Alpha must not automatically submit this paid action yet.
+6. Current Alfa-Friday module still needs live regression verification after the multi-mechanism changes.
+7. All mutating requests must remain explicit and separated from discovery/visualization.
