@@ -129,3 +129,24 @@ Result mapping:
 - action winner ID: `$.winnerOffer.id`
 
 The generic per-drum `actions` pipeline is used so this mechanism can coexist with the older Alfa-Friday mechanism without hard-coded request IDs in the UI.
+
+
+## Winner determination
+
+The initial `GET /wheel-of-fortune` response is a pre-spin state. In the owner capture it has `confirmed=false`, and every `offers[].isWinner` value is `false`. That is expected and does not identify a hidden/preselected winner.
+
+The captured production frontend does not use `offers[].isWinner` to choose the sector. In the active `NewClick_NewWheelOfFortune` branch it:
+
+1. sends `PUT /api/v1/loyalty-view/accept` with `basketOfferId` and `type: "DRUM"`;
+2. reads the mutation response object `winnerOffer`;
+3. uses `winnerOffer.id` as the winning sector ID and starts the animation toward that sector.
+
+When the wheel is already confirmed, the frontend calls:
+
+`GET /api/v1/loyalty-view/wheel-of-fortune/winner?basketOfferId=...`
+
+and again renders the final screen from the returned `winnerOffer` object.
+
+Project Alpha's internal variable `winnerOfferId` therefore means **the value of `$.winnerOffer.id`**. It is expected to remain empty before the spin/claim request and before a confirmed-winner GET succeeds.
+
+The `isWinner` fallback introduced in v0.3.10 was removed after re-checking the capture and production code.
