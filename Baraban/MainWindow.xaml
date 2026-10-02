@@ -2,223 +2,422 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
-        Title="Baraban" Height="900" Width="1380" MinHeight="720" MinWidth="1100">
-    <ScrollViewer VerticalScrollBarVisibility="Auto"
-                  HorizontalScrollBarVisibility="Auto"
-                  CanContentScroll="True">
-        <Grid Margin="12" MinWidth="1050" MinHeight="660">
+        Title="Baraban"
+        Height="900"
+        Width="1380"
+        MinHeight="720"
+        MinWidth="1050">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Border x:Name="FindPanel"
+                Grid.Row="0"
+                Visibility="Collapsed"
+                BorderBrush="#FFD0D0D0"
+                BorderThickness="1"
+                Background="#FFF7F7F7"
+                Padding="6"
+                Margin="0,0,0,6">
+            <DockPanel LastChildFill="False">
+                <TextBlock Text="Поиск:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <TextBox x:Name="FindText"
+                         Width="320"
+                         TextChanged="FindText_TextChanged"
+                         KeyDown="FindText_KeyDown"/>
+                <Button Content="Далее" Click="FindNext_Click" Margin="6,0,0,0" Padding="10,3"/>
+                <Button Content="Назад" Click="FindPrevious_Click" Margin="6,0,0,0" Padding="10,3"/>
+                <TextBlock x:Name="FindStatusText" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                <Button Content="Закрыть" Click="CloseFind_Click" Margin="10,0,0,0" Padding="10,3"/>
+            </DockPanel>
+        </Border>
+
+        <Grid x:Name="MainContentGrid" Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="300"/>
-                <ColumnDefinition Width="12"/>
-                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="285" MinWidth="190" MaxWidth="420"/>
+                <ColumnDefinition Width="6"/>
+                <ColumnDefinition Width="*" MinWidth="600"/>
             </Grid.ColumnDefinitions>
 
             <DockPanel Grid.Column="0">
-                <TextBlock DockPanel.Dock="Top" Text="Барабаны" FontSize="22" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                <TextBlock DockPanel.Dock="Top"
+                           Text="Барабаны"
+                           FontSize="22"
+                           FontWeight="SemiBold"
+                           Margin="0,0,0,8"/>
+                <Button DockPanel.Dock="Bottom"
+                        Content="Перезагрузить модули"
+                        Click="ReloadDrums_Click"
+                        Margin="0,8,0,0"/>
                 <ListBox x:Name="DrumList"
                          SelectionChanged="DrumList_SelectionChanged"
                          ScrollViewer.VerticalScrollBarVisibility="Auto"
                          ScrollViewer.HorizontalScrollBarVisibility="Auto"/>
             </DockPanel>
 
+            <GridSplitter Grid.Column="1"
+                          Width="6"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch"
+                          ResizeDirection="Columns"
+                          ResizeBehavior="PreviousAndNext"
+                          Background="#FFE5E5E5"/>
+
             <TabControl Grid.Column="2" x:Name="MainTabs">
                 <TabItem Header="Результат">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
-                        <Grid Margin="10" MinWidth="720" MinHeight="590">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                            </Grid.RowDefinitions>
+                    <Grid Margin="8">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="145" MinHeight="85"/>
+                            <RowDefinition Height="6"/>
+                            <RowDefinition Height="*" MinHeight="180"/>
+                        </Grid.RowDefinitions>
 
-                            <Grid Margin="0,0,0,10">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Text="Переменные:" VerticalAlignment="Top" Margin="0,8,8,0"/>
-                                <TextBox x:Name="VariablesText"
-                                         Grid.Column="1"
-                                         MinWidth="480"
-                                         Height="110"
-                                         AcceptsReturn="True"
-                                         TextWrapping="NoWrap"
-                                         VerticalScrollBarVisibility="Auto"
-                                         HorizontalScrollBarVisibility="Auto"
-                                         FontFamily="Consolas"/>
-                                <Button Grid.Column="2"
-                                        Content="Применить"
-                                        Click="ApplyVariables_Click"
-                                        Margin="8,0,0,0"
-                                        Padding="14,7"
-                                        VerticalAlignment="Top"/>
-                                <Button Grid.Column="3"
-                                        Content="Запустить цепочку"
-                                        Click="RunWorkflow_Click"
-                                        Margin="8,0,0,0"
-                                        Padding="18,7"
-                                        FontWeight="SemiBold"
-                                        VerticalAlignment="Top"/>
-                            </Grid>
+                        <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Переменные:"
+                                       VerticalAlignment="Top"
+                                       Margin="0,8,8,0"/>
+                            <TextBox x:Name="VariablesText"
+                                     Grid.Column="1"
+                                     AcceptsReturn="True"
+                                     TextWrapping="NoWrap"
+                                     VerticalScrollBarVisibility="Auto"
+                                     HorizontalScrollBarVisibility="Auto"
+                                     FontFamily="Consolas"/>
+                            <Button Grid.Column="2"
+                                    Content="Применить"
+                                    Click="ApplyVariables_Click"
+                                    Margin="8,0,0,0"
+                                    Padding="14,7"
+                                    VerticalAlignment="Top"/>
+                            <Button Grid.Column="3"
+                                    Content="Запустить цепочку"
+                                    Click="RunWorkflow_Click"
+                                    Margin="8,0,0,0"
+                                    Padding="18,7"
+                                    FontWeight="SemiBold"
+                                    VerticalAlignment="Top"/>
+                        </Grid>
 
-                            <Grid Grid.Row="1">
-                                <DataGrid x:Name="ResultGrid"
-                                          AutoGenerateColumns="False"
+                        <GridSplitter Grid.Row="1"
+                                      Height="6"
+                                      HorizontalAlignment="Stretch"
+                                      VerticalAlignment="Stretch"
+                                      ResizeDirection="Rows"
+                                      ResizeBehavior="PreviousAndNext"
+                                      Background="#FFE5E5E5"/>
+
+                        <Grid Grid.Row="2">
+                            <DataGrid x:Name="ResultGrid"
+                                      AutoGenerateColumns="False"
+                                      IsReadOnly="True"
+                                      CanUserAddRows="False"
+                                      CanUserDeleteRows="False"
+                                      GridLinesVisibility="Horizontal"
+                                      AlternatingRowBackground="#FFF7F7F7"
+                                      HeadersVisibility="Column"
+                                      LoadingRow="ResultGrid_LoadingRow"
+                                      ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                      ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="#" Binding="{Binding [#]}" Width="45"/>
+                                    <DataGridTextColumn Header="ID сектора" Binding="{Binding [offerDrumId]}" Width="110"/>
+                                    <DataGridTextColumn Header="Приз" Binding="{Binding [Приз]}" Width="*"
+                                                        MinWidth="220"/>
+                                    <DataGridTextColumn Header="offerId" Binding="{Binding [offerId]}" Width="110"/>
+                                    <DataGridTextColumn Header="Состояние" Binding="{Binding [Результат]}" Width="145"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                            <TextBlock x:Name="ResultEmptyText"
+                                       Text="Результат появится здесь после запуска цепочки."
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       Foreground="Gray"
+                                       FontSize="16"
+                                       IsHitTestVisible="False"/>
+                        </Grid>
+                    </Grid>
+                </TabItem>
+
+                <TabItem Header="HTTP">
+                    <Grid Margin="8">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="2*" MinHeight="150"/>
+                            <RowDefinition Height="6"/>
+                            <RowDefinition Height="*" MinHeight="110"/>
+                            <RowDefinition Height="6"/>
+                            <RowDefinition Height="1.6*" MinHeight="140"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <WrapPanel Grid.Row="0" Margin="0,0,0,8">
+                            <Button x:Name="GetPrizeOptionsButton"
+                                    Content="Получить варианты призов"
+                                    Click="GetPrizeOptions_Click"
+                                    Padding="16,7"
+                                    Margin="0,0,8,0"
+                                    FontWeight="SemiBold"/>
+                            <Button x:Name="GetDrumStateButton"
+                                    Content="Состояние барабана"
+                                    Click="GetDrumState_Click"
+                                    Padding="16,7"
+                                    Margin="0,0,8,0"/>
+                            <Button x:Name="GetPrizeButton"
+                                    Content="Получить приз"
+                                    Click="GetPrize_Click"
+                                    Padding="16,7"
+                                    FontWeight="SemiBold"/>
+                            <TextBlock x:Name="OperationStatusText"
+                                       VerticalAlignment="Center"
+                                       Margin="14,0,0,0"
+                                       Foreground="#FF555555"/>
+                        </WrapPanel>
+
+                        <GroupBox Grid.Row="1" Header="Варианты призов">
+                            <DataGrid x:Name="PrizeOptionsGrid"
+                                      AutoGenerateColumns="False"
+                                      IsReadOnly="True"
+                                      CanUserAddRows="False"
+                                      CanUserDeleteRows="False"
+                                      GridLinesVisibility="Horizontal"
+                                      AlternatingRowBackground="#FFF7F7F7"
+                                      LoadingRow="ResultGrid_LoadingRow"
+                                      ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                      ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="#" Binding="{Binding [#]}" Width="45"/>
+                                    <DataGridTextColumn Header="ID сектора" Binding="{Binding [offerDrumId]}" Width="110"/>
+                                    <DataGridTextColumn Header="Приз" Binding="{Binding [Приз]}" Width="*"
+                                                        MinWidth="220"/>
+                                    <DataGridTextColumn Header="offerId" Binding="{Binding [offerId]}" Width="110"/>
+                                    <DataGridTextColumn Header="Состояние" Binding="{Binding [Результат]}" Width="145"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </GroupBox>
+
+                        <GridSplitter Grid.Row="2"
+                                      Height="6"
+                                      HorizontalAlignment="Stretch"
+                                      VerticalAlignment="Stretch"
+                                      ResizeDirection="Rows"
+                                      ResizeBehavior="PreviousAndNext"
+                                      Background="#FFE5E5E5"/>
+
+                        <GroupBox Grid.Row="3" Header="Состояние барабана">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                <Border Background="#FFF7F7F7"
+                                        BorderBrush="#FFE0E0E0"
+                                        BorderThickness="0,0,0,1"
+                                        Padding="8">
+                                    <TextBlock x:Name="CurrentPrizeText"
+                                               Text="Текущий приз ещё не запрошен."
+                                               FontSize="15"
+                                               FontWeight="SemiBold"
+                                               TextWrapping="Wrap"/>
+                                </Border>
+                                <DataGrid x:Name="StateGrid"
+                                          Grid.Row="1"
+                                          AutoGenerateColumns="True"
                                           IsReadOnly="True"
                                           CanUserAddRows="False"
                                           CanUserDeleteRows="False"
                                           GridLinesVisibility="Horizontal"
-                                          AlternatingRowBackground="#FFF5F5F5"
-                                          HeadersVisibility="Column"
-                                          LoadingRow="ResultGrid_LoadingRow"
+                                          AlternatingRowBackground="#FFF7F7F7"
                                           ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                          ScrollViewer.HorizontalScrollBarVisibility="Auto">
-                                    <DataGrid.Columns>
-                                        <DataGridTextColumn Header="#" Binding="{Binding [#]}" Width="55"/>
-                                        <DataGridTextColumn Header="offerDrumId" Binding="{Binding [offerDrumId]}" Width="160"/>
-                                        <DataGridTextColumn Header="Приз" Binding="{Binding [Приз]}" Width="*"/>
-                                        <DataGridTextColumn Header="offerId" Binding="{Binding [offerId]}" Width="150"/>
-                                        <DataGridTextColumn Header="Результат" Binding="{Binding [Результат]}" Width="140"/>
-                                    </DataGrid.Columns>
-                                </DataGrid>
-                                <TextBlock x:Name="ResultEmptyText"
-                                           Text="Результат появится здесь после запуска цепочки."
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"
-                                           Foreground="Gray"
-                                           FontSize="16"
-                                           IsHitTestVisible="False"/>
+                                          ScrollViewer.HorizontalScrollBarVisibility="Auto"/>
                             </Grid>
-                        </Grid>
-                    </ScrollViewer>
-                </TabItem>
+                        </GroupBox>
 
-                <TabItem Header="HTTP">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
-                        <Grid Margin="10" MinWidth="760">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="150"/>
-                                <RowDefinition Height="150"/>
-                                <RowDefinition Height="150"/>
-                                <RowDefinition Height="300"/>
-                            </Grid.RowDefinitions>
+                        <GridSplitter Grid.Row="4"
+                                      Height="6"
+                                      HorizontalAlignment="Stretch"
+                                      VerticalAlignment="Stretch"
+                                      ResizeDirection="Rows"
+                                      ResizeBehavior="PreviousAndNext"
+                                      Background="#FFE5E5E5"/>
 
-                            <StackPanel Orientation="Horizontal">
-                                <ComboBox x:Name="RequestList" Width="330" SelectionChanged="RequestList_SelectionChanged"/>
-                                <ComboBox x:Name="MethodBox" Width="90" Margin="8,0,0,0">
-                                    <ComboBoxItem Content="GET"/>
-                                    <ComboBoxItem Content="POST"/>
-                                    <ComboBoxItem Content="PUT"/>
-                                    <ComboBoxItem Content="PATCH"/>
-                                    <ComboBoxItem Content="DELETE"/>
-                                </ComboBox>
-                                <Button Content="Сохранить запрос" Click="SaveRequest_Click" Margin="8,0,0,0"/>
-                                <Button Content="Отправить запрос" Click="SendRequest_Click" Margin="8,0,0,0" FontWeight="SemiBold"/>
-                            </StackPanel>
+                        <GroupBox Grid.Row="5">
+                            <GroupBox.Header>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Последний HTTP response"/>
+                                    <TextBlock x:Name="ResponseStatusText"
+                                               Margin="12,0,0,0"
+                                               FontWeight="SemiBold"/>
+                                </StackPanel>
+                            </GroupBox.Header>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" MinWidth="180"/>
+                                    <ColumnDefinition Width="6"/>
+                                    <ColumnDefinition Width="2*" MinWidth="260"/>
+                                </Grid.ColumnDefinitions>
 
-                            <TextBox x:Name="UrlText"
-                                     Grid.Row="1"
-                                     Margin="0,8,0,8"
-                                     HorizontalScrollBarVisibility="Auto"/>
-
-                            <GroupBox Header="Headers (по одному Header: Value на строку)" Grid.Row="2">
-                                <TextBox x:Name="HeadersText"
-                                         AcceptsReturn="True"
-                                         TextWrapping="NoWrap"
-                                         VerticalScrollBarVisibility="Auto"
-                                         HorizontalScrollBarVisibility="Auto"
-                                         FontFamily="Consolas"/>
-                            </GroupBox>
-
-                            <GroupBox Header="Body" Grid.Row="3" Margin="0,8,0,0">
-                                <TextBox x:Name="BodyText"
-                                         AcceptsReturn="True"
-                                         TextWrapping="NoWrap"
-                                         VerticalScrollBarVisibility="Auto"
-                                         HorizontalScrollBarVisibility="Auto"
-                                         FontFamily="Consolas"/>
-                            </GroupBox>
-
-                            <GroupBox Grid.Row="4" Margin="0,8,0,0">
-                                <GroupBox.Header>
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="Response (JSON в pretty-виде)"/>
-                                        <TextBlock x:Name="ResponseStatusText" Margin="12,0,0,0" FontWeight="SemiBold"/>
-                                    </StackPanel>
-                                </GroupBox.Header>
                                 <TextBox x:Name="ResponseText"
+                                         Grid.Column="0"
                                          IsReadOnly="True"
                                          AcceptsReturn="True"
                                          TextWrapping="NoWrap"
                                          VerticalScrollBarVisibility="Auto"
                                          HorizontalScrollBarVisibility="Auto"
                                          FontFamily="Consolas"/>
-                            </GroupBox>
 
-                            <GroupBox Header="Response — табличное представление" Grid.Row="5" Margin="0,8,0,0">
+                                <GridSplitter Grid.Column="1"
+                                              Width="6"
+                                              HorizontalAlignment="Stretch"
+                                              VerticalAlignment="Stretch"
+                                              ResizeDirection="Columns"
+                                              ResizeBehavior="PreviousAndNext"
+                                              Background="#FFE5E5E5"/>
+
                                 <DataGrid x:Name="ResponseGrid"
+                                          Grid.Column="2"
                                           AutoGenerateColumns="True"
                                           IsReadOnly="True"
                                           CanUserAddRows="False"
                                           CanUserDeleteRows="False"
                                           GridLinesVisibility="Horizontal"
-                                          AlternatingRowBackground="#FFF5F5F5"
+                                          AlternatingRowBackground="#FFF7F7F7"
                                           ScrollViewer.VerticalScrollBarVisibility="Auto"
                                           ScrollViewer.HorizontalScrollBarVisibility="Auto"/>
-                            </GroupBox>
-                        </Grid>
-                    </ScrollViewer>
+                            </Grid>
+                        </GroupBox>
+
+                        <Expander Grid.Row="6"
+                                  Header="Параметры последнего запроса (расширенный режим)"
+                                  Margin="0,6,0,0"
+                                  MaxHeight="230">
+                            <Grid Margin="0,6,0,0">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="80"/>
+                                    <RowDefinition Height="80"/>
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="90"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock x:Name="RequestNameText"
+                                           Grid.ColumnSpan="2"
+                                           FontWeight="SemiBold"
+                                           VerticalAlignment="Center"/>
+                                <Button Grid.Column="2"
+                                        Content="Сохранить параметры"
+                                        Click="SaveRequest_Click"
+                                        Padding="12,4"/>
+
+                                <ComboBox x:Name="MethodBox"
+                                          Grid.Row="1"
+                                          Width="85"
+                                          HorizontalAlignment="Left"
+                                          Margin="0,6,6,6">
+                                    <ComboBoxItem Content="GET"/>
+                                    <ComboBoxItem Content="POST"/>
+                                    <ComboBoxItem Content="PUT"/>
+                                    <ComboBoxItem Content="PATCH"/>
+                                    <ComboBoxItem Content="DELETE"/>
+                                </ComboBox>
+                                <TextBox x:Name="UrlText"
+                                         Grid.Row="1"
+                                         Grid.Column="1"
+                                         Grid.ColumnSpan="2"
+                                         Margin="0,6,0,6"
+                                         HorizontalScrollBarVisibility="Auto"/>
+
+                                <GroupBox Grid.Row="2"
+                                          Grid.ColumnSpan="3"
+                                          Header="Headers">
+                                    <TextBox x:Name="HeadersText"
+                                             AcceptsReturn="True"
+                                             TextWrapping="NoWrap"
+                                             VerticalScrollBarVisibility="Auto"
+                                             HorizontalScrollBarVisibility="Auto"
+                                             FontFamily="Consolas"/>
+                                </GroupBox>
+
+                                <GroupBox Grid.Row="3"
+                                          Grid.ColumnSpan="3"
+                                          Header="Body"
+                                          Margin="0,4,0,0">
+                                    <TextBox x:Name="BodyText"
+                                             AcceptsReturn="True"
+                                             TextWrapping="NoWrap"
+                                             VerticalScrollBarVisibility="Auto"
+                                             HorizontalScrollBarVisibility="Auto"
+                                             FontFamily="Consolas"/>
+                                </GroupBox>
+                            </Grid>
+                        </Expander>
+                    </Grid>
                 </TabItem>
 
                 <TabItem Header="Сессия">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
-                        <Grid Margin="10" MinWidth="760" MinHeight="560">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                            </Grid.RowDefinitions>
-                            <WrapPanel Margin="0,0,0,8">
-                                <Button Content="Перечитать" Click="ReloadSession_Click" Margin="0,0,8,6"/>
-                                <Button Content="Сохранить JSON" Click="SaveSession_Click" Margin="0,0,8,6"/>
-                                <Button Content="Импорт Cookie header" Click="ImportCookieHeader_Click" Margin="0,0,8,6"/>
-                                <Button Content="Импорт capture ZIP" Click="ImportCaptureZip_Click" Margin="0,0,8,6"/>
-                                <Button Content="Очистить сессию" Click="ClearSession_Click" Margin="0,0,8,6"/>
-                            </WrapPanel>
-                            <TextBox x:Name="SessionText"
-                                     Grid.Row="1"
-                                     MinHeight="500"
-                                     AcceptsReturn="True"
-                                     TextWrapping="NoWrap"
-                                     VerticalScrollBarVisibility="Auto"
-                                     HorizontalScrollBarVisibility="Auto"
-                                     FontFamily="Consolas"/>
-                        </Grid>
-                    </ScrollViewer>
+                    <Grid Margin="8">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <WrapPanel Margin="0,0,0,8">
+                            <Button Content="Перечитать" Click="ReloadSession_Click" Margin="0,0,8,0"/>
+                            <Button Content="Сохранить JSON" Click="SaveSession_Click" Margin="0,0,8,0"/>
+                            <Button Content="Импорт Cookie header" Click="ImportCookieHeader_Click" Margin="0,0,8,0"/>
+                            <Button Content="Импорт capture ZIP" Click="ImportCaptureZip_Click" Margin="0,0,8,0"/>
+                            <Button Content="Очистить сессию" Click="ClearSession_Click"/>
+                        </WrapPanel>
+                        <TextBox x:Name="SessionText"
+                                 Grid.Row="1"
+                                 AcceptsReturn="True"
+                                 TextWrapping="NoWrap"
+                                 VerticalScrollBarVisibility="Auto"
+                                 HorizontalScrollBarVisibility="Auto"
+                                 FontFamily="Consolas"/>
+                    </Grid>
                 </TabItem>
 
                 <TabItem Header="Браузер / вход">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
-                        <Grid Margin="10" MinWidth="820" MinHeight="640">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                            </Grid.RowDefinitions>
-                            <WrapPanel Margin="0,0,0,8">
-                                <TextBox x:Name="BrowserUrlText"
-                                         Width="700"
-                                         Text="https://link.alfabank.ru/partner-offers/"
-                                         HorizontalScrollBarVisibility="Auto"/>
-                                <Button Content="Открыть" Click="OpenBrowser_Click" Margin="8,0,0,0"/>
-                                <Button Content="Синхронизировать cookies" Click="SyncCookies_Click" Margin="8,0,0,0" FontWeight="SemiBold"/>
-                            </WrapPanel>
-                            <wv2:WebView2 x:Name="Browser" Grid.Row="1" MinHeight="580"/>
+                    <Grid Margin="8">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="BrowserUrlText"
+                                     Grid.Column="0"
+                                     Text="https://link.alfabank.ru/partner-offers/"
+                                     HorizontalScrollBarVisibility="Auto"/>
+                            <Button Grid.Column="1"
+                                    Content="Открыть"
+                                    Click="OpenBrowser_Click"
+                                    Margin="8,0,0,0"/>
+                            <Button Grid.Column="2"
+                                    Content="Синхронизировать cookies"
+                                    Click="SyncCookies_Click"
+                                    Margin="8,0,0,0"
+                                    FontWeight="SemiBold"/>
                         </Grid>
-                    </ScrollViewer>
+                        <wv2:WebView2 x:Name="Browser" Grid.Row="1"/>
+                    </Grid>
                 </TabItem>
             </TabControl>
         </Grid>
-    </ScrollViewer>
+    </Grid>
 </Window>
