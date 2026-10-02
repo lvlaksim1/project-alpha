@@ -72,3 +72,11 @@
 - The corrected `ProjectAlpha-Update-to-v0.3.5.exe` successfully updated the owner's real installation that had failed with v0.3.4.
   - source: owner runtime confirmation, 2026-10-02
   - authority: owner-observed runtime
+
+- v0.3.6 displays the executing application version in the Windows title bar using the assembly version, so release version changes flow into the UI without a separately hard-coded UI version string.
+  - source: implementation commit 3c98c20f28b449ff6c7ef7bd4fbee1f4f3543a5e + release run 36944055642
+  - authority: verified-code + verified-ci
+
+- The release workflow now persists exact publish manifests by first rebasing that persistence step onto the latest `origin/main`, preventing unrelated concurrent context/documentation commits from making the final manifest push non-fast-forward.
+  - source: workflow commit fb9c3cd901307cfcd9afe0314c2d07ae496ef220 + successful release run 36944055642
+  - authority: verified-ci
