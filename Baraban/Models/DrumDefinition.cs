@@ -57,6 +57,7 @@ public sealed class DrumActionMapping
     public List<DrumActionStep> State { get; set; } = [];
     public List<DrumActionStep> Claim { get; set; } = [];
     public List<DrumActionStep> Repeat { get; set; } = [];
+    public List<DrumActionStep> PaidRepeat { get; set; } = [];
     public string PrizeResultRequestId { get; set; } = "";
     public string StateResultRequestId { get; set; } = "";
     public string WinnerVariable { get; set; } = "offerWinId";
@@ -69,6 +70,8 @@ public sealed class DrumActionMapping
     public string RepeatSubtitleVariable { get; set; } = "";
     public string RepeatNeedPaidVariable { get; set; } = "";
     public string MotivationVariable { get; set; } = "";
+    public string PaidRepeatOrderVariable { get; set; } = "";
+    public string PaidRepeatPurchasedVariable { get; set; } = "";
 }
 
 public sealed class DrumActionStep
