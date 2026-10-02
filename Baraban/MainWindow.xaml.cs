@@ -58,6 +58,13 @@ public partial class MainWindow : Window
             _browserBridge = new WebViewSessionBridge(_sessionStore);
             await _browserBridge.InitializeAsync(Browser, _session, _ =>
                 Dispatcher.Invoke(RenderSession));
+
+            var restoreUrl = GetSessionRestoreUrl();
+            if (!string.IsNullOrWhiteSpace(restoreUrl) && Browser.CoreWebView2 is not null)
+            {
+                BrowserUrlText.Text = restoreUrl;
+                Browser.CoreWebView2.Navigate(restoreUrl);
+            }
         }
         catch (Exception ex)
         {
@@ -973,6 +980,23 @@ public partial class MainWindow : Window
             _variables[pair.Key] = pair.Value ?? "";
     }
 
+    private string GetSessionRestoreUrl()
+    {
+        foreach (var candidate in new[]
+                 {
+                     _session.BrowserStorage?.Url,
+                     _session.CaptureSource?.StartUrl
+                 })
+        {
+            if (!string.IsNullOrWhiteSpace(candidate) &&
+                Uri.TryCreate(candidate, UriKind.Absolute, out var uri) &&
+                uri.Scheme is "http" or "https")
+                return candidate;
+        }
+
+        return "";
+    }
+
     private void RenderSession() =>
         SessionText.Text = _sessionStore.ExportEditable(_session);
 
@@ -1012,10 +1036,13 @@ public partial class MainWindow : Window
             if (_browserBridge is not null)
                 await _browserBridge.ReplaceSessionInBrowserAsync(Browser, _session);
 
-            if (!string.IsNullOrWhiteSpace(_session.BrowserStorage?.Url))
-                BrowserUrlText.Text = _session.BrowserStorage.Url;
-            else if (!string.IsNullOrWhiteSpace(_session.CaptureSource?.StartUrl))
-                BrowserUrlText.Text = _session.CaptureSource.StartUrl;
+            var restoreUrl = GetSessionRestoreUrl();
+            if (!string.IsNullOrWhiteSpace(restoreUrl))
+            {
+                BrowserUrlText.Text = restoreUrl;
+                if (Browser.CoreWebView2 is not null)
+                    Browser.CoreWebView2.Navigate(restoreUrl);
+            }
 
             RenderSession();
             RenderAuthProfiles();
