@@ -23,10 +23,17 @@ public sealed class HttpExecutor
 
         var method = new HttpMethod(TemplateResolver.Resolve(definition.Method, variables));
         var url = TemplateResolver.Resolve(definition.Url, variables);
-        using var request = new HttpRequestMessage(method, url);
+        var uri = new Uri(url);
+        using var request = new HttpRequestMessage(method, uri);
 
         foreach (var pair in session.Headers)
             TryAddHeader(request, pair.Key, TemplateResolver.Resolve(pair.Value, variables));
+
+        if (session.HostHeaders.TryGetValue(uri.Host, out var hostHeaders))
+        {
+            foreach (var pair in hostHeaders)
+                TryAddHeader(request, pair.Key, TemplateResolver.Resolve(pair.Value, variables));
+        }
 
         var requestKey = SessionProfile.BuildRequestKey(method.Method, url);
         if (session.RequestHeaders.TryGetValue(requestKey, out var requestHeaders))
@@ -40,7 +47,7 @@ public sealed class HttpExecutor
 
         var cookieHeader = definition.Headers.TryGetValue("Cookie", out var cookieOverride) && !string.IsNullOrWhiteSpace(cookieOverride)
             ? TemplateResolver.Resolve(cookieOverride, variables)
-            : BuildCookieHeader(session, new Uri(url));
+            : BuildCookieHeader(session, uri);
         if (!string.IsNullOrWhiteSpace(cookieHeader))
         {
             request.Headers.Remove("Cookie");
