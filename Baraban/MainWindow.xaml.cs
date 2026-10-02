@@ -102,13 +102,94 @@ public partial class MainWindow : Window
     private void UpdateActionAvailability()
     {
         var active = _drum is not null && !_drum.Archived;
-        GetPrizeOptionsButton.IsEnabled = active && FindRequest("getOfferDrums") is not null;
-        GetDrumStateButton.IsEnabled = active && FindRequest("getCustomerOffersDrum") is not null;
-        GetPrizeButton.IsEnabled = active && FindRequest("confirmDrumOffer") is not null;
+        var actions = GetEffectiveActions();
+
+        GetPrizeOptionsButton.IsEnabled =
+            active && actions.PrizeOptions.Count > 0 && HasAvailablePipeline(actions.PrizeOptions);
+        GetDrumStateButton.IsEnabled =
+            active && actions.State.Count > 0 && HasAvailablePipeline(actions.State);
+        GetPrizeButton.IsEnabled =
+            active && actions.Claim.Count > 0 && HasAvailablePipeline(actions.Claim);
     }
 
     private HttpRequestDefinition? FindRequest(string id) =>
         _drum?.Requests.FirstOrDefault(x => x.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
+
+    private DrumActionMapping GetEffectiveActions()
+    {
+        if (_drum?.Actions is not null)
+            return _drum.Actions;
+
+        return new DrumActionMapping
+        {
+            PrizeOptions =
+            [
+                new() { RequestId = "getOfferById" },
+                new() { RequestId = "getCustomerOffersDrum" },
+                new() { RequestId = "getOfferDrums" }
+            ],
+            State =
+            [
+                new() { RequestId = "getOfferById" },
+                new() { RequestId = "getCustomerOffersDrum" }
+            ],
+            Claim =
+            [
+                new() { RequestId = "confirmDrumOffer" }
+            ],
+            PrizeResultRequestId = "getOfferDrums",
+            StateResultRequestId = "getCustomerOffersDrum",
+            WinnerVariable = _drum?.Result?.WinnerVariable ?? "offerWinId",
+            ClaimRequiresWinner = true
+        };
+    }
+
+    private bool HasAvailablePipeline(IEnumerable<DrumActionStep> steps) =>
+        steps.All(step => step.Optional || FindRequest(step.RequestId) is not null);
+
+    private async Task<HttpRunResult?> RunActionPipelineAsync(
+        IEnumerable<DrumActionStep> steps,
+        CancellationToken cancellationToken = default)
+    {
+        HttpRunResult? last = null;
+
+        foreach (var step in steps)
+        {
+            if (!string.IsNullOrWhiteSpace(step.WhenVariable))
+            {
+                _variables.TryGetValue(step.WhenVariable, out var actual);
+                if (!string.Equals(actual ?? "", step.WhenEquals ?? "", StringComparison.OrdinalIgnoreCase))
+                    continue;
+            }
+
+            if (FindRequest(step.RequestId) is null)
+            {
+                if (step.Optional)
+                    continue;
+
+                throw new InvalidOperationException(
+                    $"Запрос '{step.RequestId}' не найден в выбранном модуле.");
+            }
+
+            try
+            {
+                last = await ExecuteRequestAsync(step.RequestId, false, cancellationToken);
+            }
+            catch when (step.Optional)
+            {
+            }
+        }
+
+        return last;
+    }
+
+    private HttpRunResult? GetStoredResult(string requestId)
+    {
+        if (string.IsNullOrWhiteSpace(requestId))
+            return null;
+
+        return _results.TryGetValue(requestId, out var result) ? result : null;
+    }
 
     private void SelectRequestForEditor(HttpRequestDefinition request)
     {
@@ -175,39 +256,6 @@ public partial class MainWindow : Window
         return result;
     }
 
-    private async Task EnsureAdvertCampaignAsync()
-    {
-        if (_variables.TryGetValue("advertCampaignId", out var current) &&
-            !string.IsNullOrWhiteSpace(current))
-            return;
-
-        await ExecuteRequestAsync("getOfferById", false);
-    }
-
-    private async Task<HttpRunResult> FetchDrumStateAsync(bool renderResponse)
-    {
-        await EnsureAdvertCampaignAsync();
-        var state = await ExecuteRequestAsync("getCustomerOffersDrum", renderResponse);
-        _lastStateResult = state;
-        return state;
-    }
-
-    private async Task<HttpRunResult> FetchPrizeOptionsAsync(bool renderResponse)
-    {
-        await EnsureAdvertCampaignAsync();
-
-        if (!_variables.TryGetValue("available", out var available) ||
-            string.IsNullOrWhiteSpace(available) ||
-            available.Trim() == "[]")
-        {
-            await FetchDrumStateAsync(false);
-        }
-
-        var result = await ExecuteRequestAsync("getOfferDrums", renderResponse);
-        RenderPrizeOptions();
-        return result;
-    }
-
     private async void GetPrizeOptions_Click(object sender, RoutedEventArgs e)
     {
         if (!CanUseActiveDrum())
@@ -219,7 +267,15 @@ public partial class MainWindow : Window
             _showWinnerState = false;
             ApplyVariablesFromText();
             await SyncBrowserSessionIfReadyAsync();
-            await FetchPrizeOptionsAsync(true);
+
+            var actions = GetEffectiveActions();
+            var last = await RunActionPipelineAsync(actions.PrizeOptions);
+            var response = GetStoredResult(actions.PrizeResultRequestId) ?? last;
+
+            RenderPrizeOptions();
+            if (response is not null)
+                RenderHttpResponse(response);
+
             OperationStatusText.Text = _prizeTable is { Rows.Count: > 0 }
                 ? $"Получено вариантов: {_prizeTable.Rows.Count}."
                 : "Ответ получен, но варианты призов не распознаны.";
@@ -241,17 +297,28 @@ public partial class MainWindow : Window
             ApplyVariablesFromText();
             await SyncBrowserSessionIfReadyAsync();
 
-            var state = await FetchDrumStateAsync(true);
+            var actions = GetEffectiveActions();
 
             if (_prizeTable is null || _prizeTable.Rows.Count == 0)
-            {
-                await FetchPrizeOptionsAsync(false);
-                RenderHttpResponse(state);
-            }
+                await RunActionPipelineAsync(actions.PrizeOptions);
+
+            var last = await RunActionPipelineAsync(actions.State);
+            var state = GetStoredResult(actions.StateResultRequestId) ?? last;
 
             _showWinnerState = true;
             RenderPrizeOptions();
-            RenderDrumState(state);
+
+            if (state is not null)
+            {
+                RenderDrumState(state);
+                RenderHttpResponse(state);
+            }
+            else
+            {
+                CurrentPrizeText.Text = "Состояние барабана не вернуло данных.";
+                StateGrid.ItemsSource = null;
+            }
+
             OperationStatusText.Text = "Состояние барабана получено.";
         }
         catch (Exception ex)
@@ -270,26 +337,39 @@ public partial class MainWindow : Window
             ApplyVariablesFromText();
             await SyncBrowserSessionIfReadyAsync();
 
-            if (!_variables.TryGetValue("offerWinId", out var winnerId) ||
-                string.IsNullOrWhiteSpace(winnerId))
-            {
-                var state = await FetchDrumStateAsync(false);
-                if (_prizeTable is null || _prizeTable.Rows.Count == 0)
-                    await FetchPrizeOptionsAsync(false);
-                _showWinnerState = true;
-                RenderPrizeOptions();
-                RenderDrumState(state);
+            var actions = GetEffectiveActions();
 
-                _variables.TryGetValue("offerWinId", out winnerId);
+            if (_prizeTable is null || _prizeTable.Rows.Count == 0)
+            {
+                await RunActionPipelineAsync(actions.PrizeOptions);
+                RenderPrizeOptions();
             }
 
-            if (string.IsNullOrWhiteSpace(winnerId))
+            _variables.TryGetValue(actions.WinnerVariable, out var winnerId);
+
+            if (actions.ClaimRequiresWinner && string.IsNullOrWhiteSpace(winnerId))
+            {
+                var stateLast = await RunActionPipelineAsync(actions.State);
+                var state = GetStoredResult(actions.StateResultRequestId) ?? stateLast;
+
+                _showWinnerState = true;
+                RenderPrizeOptions();
+
+                if (state is not null)
+                    RenderDrumState(state);
+
+                _variables.TryGetValue(actions.WinnerVariable, out winnerId);
+            }
+
+            if (actions.ClaimRequiresWinner && string.IsNullOrWhiteSpace(winnerId))
                 throw new InvalidOperationException("Сервер не вернул идентификатор текущего приза.");
 
             var title = ResultProjector.ResolvePrizeTitle(_prizeTable, winnerId);
-            var display = string.IsNullOrWhiteSpace(title)
-                ? $"ID сектора {winnerId}"
-                : $"{title} (ID сектора {winnerId})";
+            var display = string.IsNullOrWhiteSpace(winnerId)
+                ? "Приз будет выбран сервером после подтверждения."
+                : string.IsNullOrWhiteSpace(title)
+                    ? $"ID сектора {winnerId}"
+                    : $"{title} (ID сектора {winnerId})";
 
             var confirmation = MessageBox.Show(
                 this,
@@ -302,8 +382,23 @@ public partial class MainWindow : Window
                 return;
 
             OperationStatusText.Text = "Отправляю запрос на получение приза...";
-            var result = await ExecuteRequestAsync("confirmDrumOffer", true);
-            OperationStatusText.Text = $"Запрос получения приза отправлен: HTTP {result.StatusCode}.";
+            var claim = await RunActionPipelineAsync(actions.Claim);
+
+            _showWinnerState = true;
+            RenderVariables();
+            RenderPrizeOptions();
+
+            if (claim is not null)
+            {
+                RenderDrumState(claim);
+                RenderHttpResponse(claim);
+                OperationStatusText.Text =
+                    $"Запрос получения приза отправлен: HTTP {claim.StatusCode}.";
+            }
+            else
+            {
+                OperationStatusText.Text = "Запрос получения приза выполнен.";
+            }
         }
         catch (Exception ex)
         {
@@ -382,7 +477,8 @@ public partial class MainWindow : Window
     {
         StateGrid.ItemsSource = JsonTableProjector.Build(state.ResponseBody).DefaultView;
 
-        _variables.TryGetValue("offerWinId", out var winnerId);
+        var actions = GetEffectiveActions();
+        _variables.TryGetValue(actions.WinnerVariable, out var winnerId);
         var title = ResultProjector.ResolvePrizeTitle(_prizeTable, winnerId);
 
         CurrentPrizeText.Text = string.IsNullOrWhiteSpace(winnerId)
@@ -419,13 +515,16 @@ public partial class MainWindow : Window
             RenderVariables();
             RenderPrizeOptions();
 
-            if (_results.TryGetValue("getCustomerOffersDrum", out var state))
+            var actions = GetEffectiveActions();
+            var state = GetStoredResult(actions.StateResultRequestId);
+            if (state is not null)
             {
                 _lastStateResult = state;
                 RenderDrumState(state);
             }
 
-            if (_results.TryGetValue("getOfferDrums", out var prizes))
+            var prizes = GetStoredResult(actions.PrizeResultRequestId);
+            if (prizes is not null)
                 RenderHttpResponse(prizes);
         }
         catch (Exception ex)
