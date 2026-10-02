@@ -14,6 +14,8 @@ public sealed class WebViewSessionBridge(SessionStore store)
 
     private string? _storageBootstrapScriptId;
     private SessionProfile _session = new();
+    private readonly SemaphoreSlim _cookieSyncGate = new(1, 1);
+    private DateTimeOffset _lastResponseCookieSyncUtc = DateTimeOffset.MinValue;
 
     public async Task InitializeAsync(WebView2 webView, SessionProfile session, Action<string>? observedHeader = null)
     {
@@ -72,7 +74,7 @@ public sealed class WebViewSessionBridge(SessionStore store)
                 if (Uri.TryCreate(args.Request.Uri, UriKind.Absolute, out var uri) &&
                     IsSessionRelevantHost(uri.Host))
                 {
-                    await SyncCookiesFromBrowserAsync(webView, _session);
+                    await SyncCookiesFromBrowserThrottledAsync(webView);
                 }
             }
             catch
@@ -80,7 +82,7 @@ public sealed class WebViewSessionBridge(SessionStore store)
             }
         };
 
-        await RestoreSessionToBrowserAsync(webView, session);
+        await ReplaceSessionInBrowserAsync(webView, session);
 
         webView.NavigationCompleted += async (_, _) =>
         {
@@ -143,6 +145,30 @@ public sealed class WebViewSessionBridge(SessionStore store)
         _session = session;
         await SyncBrowserStorageFromCurrentPageAsync(webView, session);
         await SyncCookiesFromBrowserAsync(webView, session);
+    }
+
+    private async Task SyncCookiesFromBrowserThrottledAsync(WebView2 webView)
+    {
+        var now = DateTimeOffset.UtcNow;
+        if (now - _lastResponseCookieSyncUtc < TimeSpan.FromSeconds(1))
+            return;
+
+        if (!await _cookieSyncGate.WaitAsync(0))
+            return;
+
+        try
+        {
+            now = DateTimeOffset.UtcNow;
+            if (now - _lastResponseCookieSyncUtc < TimeSpan.FromSeconds(1))
+                return;
+
+            _lastResponseCookieSyncUtc = now;
+            await SyncCookiesFromBrowserAsync(webView, _session);
+        }
+        finally
+        {
+            _cookieSyncGate.Release();
+        }
     }
 
     public async Task SyncCookiesFromBrowserAsync(WebView2 webView, SessionProfile session, string? url = null)
