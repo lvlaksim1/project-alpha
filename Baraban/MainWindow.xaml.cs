@@ -97,6 +97,7 @@ public partial class MainWindow : Window
         RenderVariables();
         ClearResultViews();
         UpdateActionAvailability();
+        UpdateActionPresentation();
     }
 
     private void UpdateActionAvailability()
@@ -108,8 +109,77 @@ public partial class MainWindow : Window
             active && actions.PrizeOptions.Count > 0 && HasAvailablePipeline(actions.PrizeOptions);
         GetDrumStateButton.IsEnabled =
             active && actions.State.Count > 0 && HasAvailablePipeline(actions.State);
-        GetPrizeButton.IsEnabled =
-            active && actions.Claim.Count > 0 && HasAvailablePipeline(actions.Claim);
+
+        var hasClaim = actions.Claim.Count > 0 && HasAvailablePipeline(actions.Claim);
+        var hasRepeat = HasRepeatOffer(actions) && actions.Repeat.Count > 0 && HasAvailablePipeline(actions.Repeat);
+        var hasPaidRepeat = HasPaidRepeatOffer(actions);
+        GetPrizeButton.IsEnabled = active && (hasClaim || hasRepeat || hasPaidRepeat);
+    }
+
+    private void UpdateActionPresentation()
+    {
+        var actions = GetEffectiveActions();
+
+        GetPrizeOptionsButton.Content = string.IsNullOrWhiteSpace(actions.PrizeOptionsLabel)
+            ? "Получить варианты призов"
+            : actions.PrizeOptionsLabel;
+        GetDrumStateButton.Content = string.IsNullOrWhiteSpace(actions.StateLabel)
+            ? "Состояние барабана"
+            : actions.StateLabel;
+
+        var repeatTitle = GetVariable(actions.RepeatTitleVariable);
+        var repeatSubtitle = GetVariable(actions.RepeatSubtitleVariable);
+
+        if (!string.IsNullOrWhiteSpace(repeatTitle))
+        {
+            GetPrizeButton.Content = string.IsNullOrWhiteSpace(repeatSubtitle)
+                ? repeatTitle
+                : $"{repeatTitle} — {repeatSubtitle}";
+        }
+        else
+        {
+            var dynamicClaimLabel = GetVariable(actions.ClaimLabelVariable);
+            GetPrizeButton.Content = !string.IsNullOrWhiteSpace(dynamicClaimLabel)
+                ? dynamicClaimLabel
+                : string.IsNullOrWhiteSpace(actions.ClaimLabel)
+                    ? "Получить приз"
+                    : actions.ClaimLabel;
+        }
+
+        UpdateActionAvailability();
+    }
+
+    private string GetVariable(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return "";
+
+        return _variables.TryGetValue(name, out var value) ? value ?? "" : "";
+    }
+
+    private bool HasRepeatOffer(DrumActionMapping actions) =>
+        !string.IsNullOrWhiteSpace(GetVariable(actions.RepeatTitleVariable)) &&
+        !HasPaidRepeatOffer(actions);
+
+    private bool HasPaidRepeatOffer(DrumActionMapping actions) =>
+        bool.TryParse(GetVariable(actions.RepeatNeedPaidVariable), out var needPaid) && needPaid;
+
+    private void ClearRepeatState(DrumActionMapping actions, bool clearWinner)
+    {
+        foreach (var variable in new[]
+                 {
+                     actions.RepeatTitleVariable,
+                     actions.RepeatSubtitleVariable,
+                     actions.RepeatNeedPaidVariable,
+                     actions.MotivationVariable
+                 })
+        {
+            if (!string.IsNullOrWhiteSpace(variable))
+                _variables[variable] = "";
+        }
+
+        if (clearWinner && !string.IsNullOrWhiteSpace(actions.WinnerVariable))
+            _variables[actions.WinnerVariable] = "";
     }
 
     private HttpRequestDefinition? FindRequest(string id) =>
@@ -253,6 +323,7 @@ public partial class MainWindow : Window
             RenderHttpResponse(result);
 
         RenderVariables();
+        UpdateActionPresentation();
         return result;
     }
 
@@ -279,6 +350,7 @@ public partial class MainWindow : Window
             OperationStatusText.Text = _prizeTable is { Rows.Count: > 0 }
                 ? $"Получено вариантов: {_prizeTable.Rows.Count}."
                 : "Ответ получен, но варианты призов не распознаны.";
+            UpdateActionPresentation();
         }
         catch (Exception ex)
         {
@@ -320,6 +392,7 @@ public partial class MainWindow : Window
             }
 
             OperationStatusText.Text = "Состояние барабана получено.";
+            UpdateActionPresentation();
         }
         catch (Exception ex)
         {
@@ -338,6 +411,65 @@ public partial class MainWindow : Window
             await SyncBrowserSessionIfReadyAsync();
 
             var actions = GetEffectiveActions();
+
+            if (HasPaidRepeatOffer(actions))
+            {
+                var repeatTitle = GetVariable(actions.RepeatTitleVariable);
+                var repeatSubtitle = GetVariable(actions.RepeatSubtitleVariable);
+                var paidLabel = string.Join(" — ", new[] { repeatTitle, repeatSubtitle }
+                    .Where(x => !string.IsNullOrWhiteSpace(x)));
+
+                MessageBox.Show(
+                    this,
+                    $"Сервер предлагает платную повторную попытку: {paidLabel}.\n\n" +
+                    "В предоставленном capture есть только предложение оплаты, но нет сетевого запроса фактического подтверждения покупки. " +
+                    "Project Alpha не будет отправлять неизвестный платёжный запрос без runtime-evidence.",
+                    "Платная повторная попытка",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
+            if (HasRepeatOffer(actions))
+            {
+                if (actions.Repeat.Count == 0 || !HasAvailablePipeline(actions.Repeat))
+                    throw new InvalidOperationException("Модуль сообщает о повторной попытке, но не содержит pipeline её подготовки.");
+
+                var repeatTitle = GetVariable(actions.RepeatTitleVariable);
+                var repeatSubtitle = GetVariable(actions.RepeatSubtitleVariable);
+                var motivation = GetVariable(actions.MotivationVariable);
+                var prompt = string.IsNullOrWhiteSpace(motivation)
+                    ? "Подготовить повторную прокрутку?"
+                    : motivation + "\n\nПодготовить повторную прокрутку?";
+
+                var repeatConfirm = MessageBox.Show(
+                    this,
+                    prompt,
+                    string.IsNullOrWhiteSpace(repeatSubtitle)
+                        ? repeatTitle
+                        : $"{repeatTitle} — {repeatSubtitle}",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+
+                if (repeatConfirm != MessageBoxResult.Yes)
+                    return;
+
+                OperationStatusText.Text = "Подготавливаю повторную прокрутку...";
+                var repeatResult = await RunActionPipelineAsync(actions.Repeat);
+                ClearRepeatState(actions, clearWinner: true);
+                _showWinnerState = false;
+                RenderVariables();
+                RenderPrizeOptions();
+
+                if (repeatResult is not null)
+                    RenderHttpResponse(repeatResult);
+
+                CurrentPrizeText.Text =
+                    "Повторная попытка подготовлена. Нажмите «Крутить скорее!», чтобы сервер выбрал новый приз.";
+                OperationStatusText.Text = "Повторная попытка готова.";
+                UpdateActionPresentation();
+                return;
+            }
 
             if (_prizeTable is null || _prizeTable.Rows.Count == 0)
             {
@@ -371,17 +503,18 @@ public partial class MainWindow : Window
                     ? $"ID сектора {winnerId}"
                     : $"{title} (ID сектора {winnerId})";
 
+            var claimLabel = Convert.ToString(GetPrizeButton.Content) ?? actions.ClaimLabel;
             var confirmation = MessageBox.Show(
                 this,
-                $"Отправить запрос на получение приза?\n\n{display}",
-                "Получить приз",
+                $"Выполнить «{claimLabel}»?\n\n{display}",
+                claimLabel,
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Warning);
 
             if (confirmation != MessageBoxResult.Yes)
                 return;
 
-            OperationStatusText.Text = "Отправляю запрос на получение приза...";
+            OperationStatusText.Text = $"Выполняю «{Convert.ToString(GetPrizeButton.Content)}»...";
             var claim = await RunActionPipelineAsync(actions.Claim);
 
             _showWinnerState = true;
@@ -392,13 +525,20 @@ public partial class MainWindow : Window
             {
                 RenderDrumState(claim);
                 RenderHttpResponse(claim);
-                OperationStatusText.Text =
-                    $"Запрос получения приза отправлен: HTTP {claim.StatusCode}.";
+                var winnerAfterClaim = GetVariable(actions.WinnerVariable);
+                var winnerTitle = ResultProjector.ResolvePrizeTitle(_prizeTable, winnerAfterClaim);
+                OperationStatusText.Text = string.IsNullOrWhiteSpace(winnerAfterClaim)
+                    ? $"Действие выполнено: HTTP {claim.StatusCode}."
+                    : string.IsNullOrWhiteSpace(winnerTitle)
+                        ? $"Выпал сектор {winnerAfterClaim}. HTTP {claim.StatusCode}."
+                        : $"Выпал приз: {winnerTitle}. HTTP {claim.StatusCode}.";
             }
             else
             {
-                OperationStatusText.Text = "Запрос получения приза выполнен.";
+                OperationStatusText.Text = "Действие выполнено.";
             }
+
+            UpdateActionPresentation();
         }
         catch (Exception ex)
         {
@@ -502,7 +642,7 @@ public partial class MainWindow : Window
                 string.Equals(confirmed, "false", StringComparison.OrdinalIgnoreCase))
             {
                 CurrentPrizeText.Text =
-                    "Барабан ещё не прокручен. Победитель будет определён сервером после «Получить приз».";
+                    $"Барабан ещё не прокручен. Победитель будет определён сервером после «{Convert.ToString(GetPrizeButton.Content)}».";
             }
             else if (!actions.ClaimRequiresWinner &&
                      string.Equals(confirmed, "true", StringComparison.OrdinalIgnoreCase))
