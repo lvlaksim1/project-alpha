@@ -5,7 +5,7 @@ Updated: 2026-10-02 MSK
 ## Authority
 - Authoritative repository: `lvlaksim1/project-alpha`.
 - Project Manager context capsule is installed and is the recovery source for future clean chats.
-- Current released application version: `v0.3.15`.
+- Current released application version: `v0.3.16`.
 - Owner's currently confirmed installed version: `v0.3.8`.
 
 ## Application
@@ -14,7 +14,10 @@ Updated: 2026-10-02 MSK
 - User/session/work-data root: `%LOCALAPPDATA%\Baraban`.
 - Editable drum definitions live under `%LOCALAPPDATA%\Baraban\Drums`; built-in drum JSON files are defaults only.
 - WebView2 profile: `%LOCALAPPDATA%\Baraban\WebView2`.
-- DPAPI-protected session state: `%LOCALAPPDATA%\Baraban\session.bin`.
+- Authorization state is now multi-profile:
+  - encrypted profiles: `%LOCALAPPDATA%\Baraban\AuthProfiles\*.bin` (DPAPI);
+  - non-secret profile index: `%LOCALAPPDATA%\Baraban\profiles.json`;
+  - legacy `session.bin` is migrated into the default **Основной** profile on first v0.3.16 start.
 
 ## Drum modules
 - Current working module: `alfa-friday-tasty-coffee-2026-09-30`.
@@ -41,7 +44,7 @@ Updated: 2026-10-02 MSK
 - Normal updates are delivered as one self-contained cumulative EXE:
   `ProjectAlpha-Update-to-vX.Y.Z.exe`.
 - Current normal update:
-  `ProjectAlpha-Update-to-v0.3.15.exe` (~2.2 MB).
+  `ProjectAlpha-Update-to-v0.3.16.exe` (~2.2 MB).
 - Owner-side execution of the v0.3.4 updater failed on the real installation with generic exit code 1 despite reconstructed-base CI success.
 - The failure class was traced to Windows PowerShell 5.1 handling of the updater script plus insufficient real-install compatibility assumptions.
 - v0.3.5 remediation includes:
@@ -138,7 +141,18 @@ Updated: 2026-10-02 MSK
 - Owner capture `Browser-Network-20261002-132502.zip` directly records both partner wheels on `web.alfabank.ru/partner-offers/`.
 - Podruzhka: `basketOfferId=22072`; observed options are 100/70/50/30/20%; real PUT /accept returned `winnerOffer.id=22092` = Подружка 50%.
 - MVideo: `basketOfferId=21837`; observed options are 10/20/30/50/70/100%; real PUT /accept returned `winnerOffer.id=21867` = М.ВИДЕО 70%.
-- Both winner responses return `actionButton.title="Отлично"` and `actionButton.type="endActionButton"`; these are terminal one-shot wheels with no repeat path in the capture.
-- v0.3.15 adds both modules and a generic terminal-action contract. When a module-defined terminal variable matches its terminal value, the normal mutating action button is disabled, preventing accidental repeated PUT /accept.
+- Both winner responses return `actionButton.title="Отлично"` and `actionButton.type="endActionButton"`; the capture itself contains no second spin. At the owner's explicit request, v0.3.16 exposes a confirmed **Повторить PUT /accept** action after this terminal response so the real server behavior can be tested.
+- Terminal retry is module-controlled (`allowClaimAfterTerminal`) and never automatic.
 - Sanitized evidence is stored in `docs/ALFA_ONLINE_PARTNER_WHEELS_2026-10-02.md`; the raw capture is not committed because it contains authenticated session/request material.
 - v0.3.15 release run `36996176531` completed successfully; cumulative base tests, hybrid repair, final Update EXE smoke-test and uninstall preservation passed; no Actions artifacts were produced.
+
+
+## Authorization profiles and session longevity
+- v0.3.16 adds named authorization profiles with an editable profile selector, **Сохранить как профиль**, deletion, persistence of the active profile, and runtime switching.
+- Switching saves the current browser state, clears WebView cookies, restores the selected DPAPI profile, restores its cookies/localStorage/sessionStorage and opens its last saved URL.
+- Browser auth state is persisted more aggressively: relevant Alfa Online responses trigger throttled cookie synchronization, navigation captures current localStorage/sessionStorage, and direct Project Alpha HTTP responses feed observed `Set-Cookie` values back into the active profile.
+- On startup the selected profile is restored before its last Alfa Online URL is loaded, allowing the real site to run its own auth-expiry recovery logic.
+- Across all four owner captures there is no actual `/refresh`, token endpoint, or OAuth refresh-token exchange. A production feature flag named `authExpiredRefreshToken` is enabled, however, and the captures contain long-lived fast-login/device state alongside the shorter working auth token.
+- The captured working `alfa-token` lifetime is approximately 12 hours. Fast-login/device material persists substantially longer. Project Alpha therefore preserves those real inputs but does not invent an undocumented refresh API.
+- Sanitized analysis: `docs/AUTH_PROFILES_AND_SESSION_REFRESH_2026-10-02.md`.
+- v0.3.16 release run `37000576380` completed successfully; cumulative base tests, hybrid repair, compiled Update EXE smoke-test and uninstall preservation all passed; no Actions artifacts were produced.
