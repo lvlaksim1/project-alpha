@@ -37,7 +37,7 @@ public static partial class JsonTextFormatter
         return UnicodeEscapeRegex().Replace(text, match =>
         {
             var value = int.Parse(match.Groups[1].Value, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
-            return char.ConvertFromUtf32(value);
+            return ((char)value).ToString();
         });
     }
 
