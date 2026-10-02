@@ -6,7 +6,7 @@ namespace Baraban.Services;
 
 public static class ResultProjector
 {
-    private static readonly string[] DrumIdNames = ["offerDrumId", "drumId"];
+    private static readonly string[] DrumIdNames = ["offerDrumId", "drumId", "id"];
     private static readonly string[] OfferIdNames = ["offerId"];
     private static readonly string[] TitleNames =
     [
