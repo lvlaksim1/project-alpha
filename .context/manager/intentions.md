@@ -1,6 +1,7 @@
 # Manager intentions and commitments
 
 ## Completed
+- Verify `ProjectAlpha-Update-to-v0.3.5.exe` on the owner's real installation that had failed with v0.3.4; owner confirmed successful update on 2026-10-02.
 - Create public `lvlaksim1/project-alpha` and install the Project Manager capsule.
 - Migrate the current application into the new neutral repository.
 - Keep the old Alfa module as an archive.
@@ -16,7 +17,6 @@
 - Enforce minimal GitHub storage / no Actions-artifact policy.
 
 ## Active
-- Obtain owner-side confirmation that `ProjectAlpha-Update-to-v0.3.5.exe` succeeds on the real installation where v0.3.4 failed with exit code 1.
 - Live-verify recorder ZIP session restoration on Windows.
 - Live-verify the current Alfa-Friday non-mutating request chain from Project Alpha.
 - Preserve multi-drum modularity and explicit confirmation semantics in all future changes.
