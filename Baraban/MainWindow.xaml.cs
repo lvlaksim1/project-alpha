@@ -28,6 +28,7 @@ public partial class MainWindow : Window
     private HttpRunResult? _lastStateResult;
     private int _findMatchIndex = -1;
     private bool _showWinnerState;
+    private bool _updatingAuthProfiles;
 
     public MainWindow()
     {
@@ -50,6 +51,7 @@ public partial class MainWindow : Window
     {
         ReloadDrums();
         RenderSession();
+        RenderAuthProfiles();
 
         try
         {
@@ -112,7 +114,7 @@ public partial class MainWindow : Window
 
         var terminal = IsTerminalAction(actions);
         var hasClaim =
-            !terminal &&
+            (!terminal || actions.AllowClaimAfterTerminal) &&
             actions.Claim.Count > 0 &&
             HasAvailablePipeline(actions.Claim);
         var hasRepeat =
@@ -149,7 +151,13 @@ public partial class MainWindow : Window
         var repeatTitle = GetVariable(actions.RepeatTitleVariable);
         var repeatSubtitle = GetVariable(actions.RepeatSubtitleVariable);
 
-        if (!string.IsNullOrWhiteSpace(repeatTitle))
+        if (IsTerminalAction(actions) && actions.AllowClaimAfterTerminal)
+        {
+            GetPrizeButton.Content = string.IsNullOrWhiteSpace(actions.TerminalRetryLabel)
+                ? "Повторить PUT /accept"
+                : actions.TerminalRetryLabel;
+        }
+        else if (!string.IsNullOrWhiteSpace(repeatTitle))
         {
             GetPrizeButton.Content = string.IsNullOrWhiteSpace(repeatSubtitle)
                 ? repeatTitle
@@ -414,6 +422,7 @@ public partial class MainWindow : Window
 
             OperationStatusText.Text = $"Отправляю вручную: {edited.Method} {edited.Name}...";
             var result = await _executor.SendAsync(edited, _session, _variables);
+            _sessionStore.Save(_session);
             _results[edited.Id] = result;
             WorkflowRunner.Capture(edited, result.ResponseBody, _variables);
 
@@ -441,6 +450,7 @@ public partial class MainWindow : Window
 
         SelectRequestForEditor(request);
         var result = await _executor.SendAsync(request, _session, _variables, cancellationToken);
+        _sessionStore.Save(_session);
         _results[request.Id] = result;
         WorkflowRunner.Capture(request, result.ResponseBody, _variables);
 
@@ -889,6 +899,7 @@ public partial class MainWindow : Window
 
             var runner = new WorkflowRunner(_executor);
             var results = await runner.RunAsync(_drum, _session, _variables);
+            _sessionStore.Save(_session);
 
             foreach (var result in results)
                 _results[result.RequestId] = result;
@@ -965,10 +976,125 @@ public partial class MainWindow : Window
     private void RenderSession() =>
         SessionText.Text = _sessionStore.ExportEditable(_session);
 
-    private void ReloadSession_Click(object sender, RoutedEventArgs e)
+    private void RenderAuthProfiles()
+    {
+        _updatingAuthProfiles = true;
+        try
+        {
+            var profiles = _sessionStore.ListProfiles();
+            AuthProfileBox.ItemsSource = profiles;
+            AuthProfileBox.SelectedItem = _sessionStore.ActiveProfileName;
+            AuthProfileBox.Text = _sessionStore.ActiveProfileName;
+        }
+        finally
+        {
+            _updatingAuthProfiles = false;
+        }
+    }
+
+    private async void AuthProfileBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_updatingAuthProfiles || AuthProfileBox.SelectedItem is not string profileName)
+            return;
+
+        if (profileName.Equals(_sessionStore.ActiveProfileName, StringComparison.CurrentCultureIgnoreCase))
+            return;
+
+        try
+        {
+            await SyncBrowserSessionIfReadyAsync();
+
+            if (!_sessionStore.SetActiveProfile(profileName))
+                return;
+
+            _session = _sessionStore.Load();
+
+            if (_browserBridge is not null)
+                await _browserBridge.ReplaceSessionInBrowserAsync(Browser, _session);
+
+            if (!string.IsNullOrWhiteSpace(_session.BrowserStorage?.Url))
+                BrowserUrlText.Text = _session.BrowserStorage.Url;
+            else if (!string.IsNullOrWhiteSpace(_session.CaptureSource?.StartUrl))
+                BrowserUrlText.Text = _session.CaptureSource.StartUrl;
+
+            RenderSession();
+            RenderAuthProfiles();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Не удалось переключить профиль", MessageBoxButton.OK, MessageBoxImage.Error);
+            RenderAuthProfiles();
+        }
+    }
+
+    private async void SaveAuthProfileAs_Click(object sender, RoutedEventArgs e)
+    {
+        var name = AuthProfileBox.Text.Trim();
+        try
+        {
+            if (_browserBridge is not null && Browser.CoreWebView2 is not null)
+                await _browserBridge.SyncCurrentBrowserStateAsync(Browser, _session);
+
+            _session = _sessionStore.ImportEditable(SessionText.Text);
+            _sessionStore.SaveAs(name, _session);
+
+            if (_browserBridge is not null)
+                await _browserBridge.ReplaceSessionInBrowserAsync(Browser, _session);
+
+            RenderSession();
+            RenderAuthProfiles();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Не удалось сохранить профиль", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private async void DeleteAuthProfile_Click(object sender, RoutedEventArgs e)
+    {
+        var name = _sessionStore.ActiveProfileName;
+        if (_sessionStore.ListProfiles().Count <= 1)
+        {
+            MessageBox.Show(this, "Нельзя удалить единственный профиль.", "Профили авторизации",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var answer = MessageBox.Show(
+            this,
+            $"Удалить профиль авторизации «{name}»?",
+            "Профили авторизации",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+
+        if (answer != MessageBoxResult.Yes)
+            return;
+
+        try
+        {
+            if (!_sessionStore.DeleteProfile(name))
+                return;
+
+            _session = _sessionStore.Load();
+            if (_browserBridge is not null)
+                await _browserBridge.ReplaceSessionInBrowserAsync(Browser, _session);
+
+            RenderSession();
+            RenderAuthProfiles();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Не удалось удалить профиль", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private async void ReloadSession_Click(object sender, RoutedEventArgs e)
     {
         _session = _sessionStore.Load();
+        if (_browserBridge is not null)
+            await _browserBridge.ReplaceSessionInBrowserAsync(Browser, _session);
         RenderSession();
+        RenderAuthProfiles();
     }
 
     private async void SaveSession_Click(object sender, RoutedEventArgs e)
@@ -1063,11 +1189,16 @@ public partial class MainWindow : Window
         }
     }
 
-    private void ClearSession_Click(object sender, RoutedEventArgs e)
+    private async void ClearSession_Click(object sender, RoutedEventArgs e)
     {
         _session = new SessionProfile();
         _sessionStore.Clear();
+
+        if (_browserBridge is not null)
+            await _browserBridge.ReplaceSessionInBrowserAsync(Browser, _session);
+
         RenderSession();
+        RenderAuthProfiles();
     }
 
     private void OpenBrowser_Click(object sender, RoutedEventArgs e)
@@ -1083,7 +1214,7 @@ public partial class MainWindow : Window
         if (_browserBridge is null)
             return;
 
-        await _browserBridge.SyncCookiesFromBrowserAsync(Browser, _session);
+        await _browserBridge.SyncCurrentBrowserStateAsync(Browser, _session);
         RenderSession();
     }
 
@@ -1092,7 +1223,7 @@ public partial class MainWindow : Window
         if (_browserBridge is null || Browser.CoreWebView2 is null)
             return;
 
-        await _browserBridge.SyncCookiesFromBrowserAsync(Browser, _session);
+        await _browserBridge.SyncCurrentBrowserStateAsync(Browser, _session);
         RenderSession();
     }
 
