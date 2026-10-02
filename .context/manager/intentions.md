@@ -1,6 +1,7 @@
 # Manager intentions and commitments
 
 ## Completed
+- Analyze the 13:25 Network Recorder capture, add capture-grounded Подружка and М.ВИДЕО one-shot Alfa Online modules, generalize terminal action handling so `endActionButton` disables repeated mutation, and release v0.3.15.
 - Add one-shot manual sending of edited requests from the advanced request editor, keep persistence separate, retain confirmation for potentially mutating requests, fix repair-mode seed-if-missing delivery of mutable modules, and release v0.3.14.
 - Analyze the 06:11 paid-repeat capture, verify the real POST /loyalty-view/offer payment request and post-payment GET/PUT sequence, implement explicit paid reroll support without hard-coding account-specific order data, and release v0.3.13.
 - Analyze the full 05:45 Alfa Online capture with two real spins and the free reroll; replace the incorrect `isWinner` assumption with authoritative `winnerOffer.id`, implement the observed `Крутить скорее! → Крутить ещё → Крутить скорее!` state machine, and release it as v0.3.12.
@@ -27,7 +28,7 @@
 - Enforce minimal GitHub storage / no Actions-artifact policy.
 
 ## Active
-- Obtain owner-side confirmation of v0.3.14 on the real installation, including the new edited-request **Отправить** workflow. Paid-repeat testing remains optional because it causes a real 49 ₽ debit; Paid-repeat testing remains optional because it causes a real 49 ₽ debit; if the owner chooses to test it, verify POST success, no duplicate payment, GET preparation, and the subsequent PUT winner.
-- Live-verify recorder ZIP session restoration on Windows.
-- Live-verify the current Alfa-Friday non-mutating request chain from Project Alpha.
-- Preserve multi-drum modularity and explicit confirmation semantics in all future changes.
+- Obtain owner-side confirmation of v0.3.15 on the real installation: both new modules are seeded, prize lists render correctly, winner IDs map to names, and terminal **Отлично** disables a second spin.
+- Verify the v0.3.14 edited-request **Отправить** workflow on the owner's machine.
+- Keep paid-repeat testing optional because it causes a real debit; never trigger it automatically.
+- Live-verify recorder ZIP session restoration and preserve all existing Alfa-Friday / Alfa Online mechanisms.
