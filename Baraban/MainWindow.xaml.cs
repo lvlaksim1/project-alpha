@@ -1032,10 +1032,11 @@ public partial class MainWindow : Window
         var name = AuthProfileBox.Text.Trim();
         try
         {
+            _session = _sessionStore.ImportEditable(SessionText.Text);
+
             if (_browserBridge is not null && Browser.CoreWebView2 is not null)
                 await _browserBridge.SyncCurrentBrowserStateAsync(Browser, _session);
 
-            _session = _sessionStore.ImportEditable(SessionText.Text);
             _sessionStore.SaveAs(name, _session);
 
             if (_browserBridge is not null)
@@ -1105,7 +1106,7 @@ public partial class MainWindow : Window
             _sessionStore.Save(_session);
 
             if (_browserBridge is not null)
-                await _browserBridge.RestoreSessionToBrowserAsync(Browser, _session);
+                await _browserBridge.ReplaceSessionInBrowserAsync(Browser, _session);
 
             RenderSession();
         }
