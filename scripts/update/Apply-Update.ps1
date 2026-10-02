@@ -181,6 +181,10 @@ function Assert-TargetState($TargetManifest) {
 function Apply-Plan($selected, $TargetManifest) {
     $manifest = $selected.Manifest
     $payloadRoot = Join-Path $selected.Root "payload"
+    $seedIfMissing = @()
+    if ($selected.Mode -eq "repair" -and $null -ne $manifest.seedIfMissing) {
+        $seedIfMissing = @($manifest.seedIfMissing)
+    }
 
     if ($selected.Mode -eq "exact") {
         Write-Host "Detected exact installed base: $($manifest.fromTag)"
@@ -238,6 +242,29 @@ function Apply-Plan($selected, $TargetManifest) {
             }
         }
 
+        $seedsToApply = @()
+        foreach ($entry in $seedIfMissing) {
+            $relative = Normalize-RelativePath ([string]$entry.path)
+            $destination = Join-Path $InstallDir $relative
+            $source = Join-Path $payloadRoot $relative
+
+            if (Test-Path -LiteralPath $destination -PathType Leaf) {
+                continue
+            }
+
+            if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
+                throw "Update seed payload is missing '$relative'."
+            }
+
+            $payloadHash = Get-Sha256 $source
+            if ($payloadHash -ne ([string]$entry.sha256).ToLowerInvariant()) {
+                throw "Update seed payload hash mismatch for '$relative'."
+            }
+
+            $hadOriginal[$relative] = $false
+            $seedsToApply += $entry
+        }
+
         foreach ($relativeRaw in @($manifest.delete)) {
             $relative = Normalize-RelativePath ([string]$relativeRaw)
             $destination = Join-Path $InstallDir $relative
@@ -252,6 +279,14 @@ function Apply-Plan($selected, $TargetManifest) {
         }
 
         foreach ($entry in @($manifest.files)) {
+            $relative = Normalize-RelativePath ([string]$entry.path)
+            $destination = Join-Path $InstallDir $relative
+            $source = Join-Path $payloadRoot $relative
+            New-Item -ItemType Directory -Path (Split-Path -Parent $destination) -Force | Out-Null
+            Copy-Item -LiteralPath $source -Destination $destination -Force
+        }
+
+        foreach ($entry in $seedsToApply) {
             $relative = Normalize-RelativePath ([string]$entry.path)
             $destination = Join-Path $InstallDir $relative
             $source = Join-Path $payloadRoot $relative
@@ -285,6 +320,14 @@ function Apply-Plan($selected, $TargetManifest) {
                 }
             }
             elseif (Test-Path -LiteralPath $destination) {
+                Remove-Item -LiteralPath $destination -Force
+            }
+        }
+
+        foreach ($entry in $seedsToApply) {
+            $relative = Normalize-RelativePath ([string]$entry.path)
+            $destination = Join-Path $InstallDir $relative
+            if (Test-Path -LiteralPath $destination) {
                 Remove-Item -LiteralPath $destination -Force
             }
         }
