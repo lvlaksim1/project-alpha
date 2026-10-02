@@ -110,3 +110,23 @@
 
 - Existing user-editable drum JSON files are mutable state and may intentionally differ from built-in target files. Update verification must require exact hashes for immutable program files, preserve legitimate existing drum edits, and still ensure newly introduced built-in drum modules are seeded.
   - authority: updater design + verified CI v0.3.10
+
+- Full owner capture `Browser-Network-20261002-054552.zip` directly records two Alfa Online spins. Both real `PUT /api/v1/loyalty-view/accept` calls use body `{"basketOfferId":"21871","type":"DRUM"}`; the first returned winner 21937 (Цифровые товары 7%), the second 21940 (Такси 7%).
+  - source: owner-supplied full runtime capture, 2026-10-02
+  - authority: verified-runtime evidence
+
+- `offers[].isWinner` is not an Alfa Online winner authority. It remained false for every offer before, between and after the two observed spins. The winner authority is `winnerOffer.id` from the PUT response, or the dedicated winner GET when reloading an already-confirmed result.
+  - source: full runtime capture + captured production frontend behavior
+  - authority: verified-runtime evidence
+
+- Free repeat semantics are two-phase: the server's first winner response exposes `reconfirmButton.needPaid=false` / `1 попытка`; clicking `Крутить ещё` performs only a fresh wheel GET/reset, then the user must invoke `Крутить скорее!` again for the second PUT. Starting that repeat forfeits the previous result.
+  - source: action timestamps + API chronology in full capture
+  - authority: verified-runtime evidence
+
+- After the second observed spin the server offered `needPaid=true`, `за 49 ₽`, with a complete payment `modalView.order`. Captured production JS maps `buyOffer` to `POST /api/v1/loyalty-view/offer`, but the payment confirmation itself was not executed in runtime traffic. Therefore paid repeat may be displayed but must not auto-submit until runtime evidence exists.
+  - source: second PUT response + captured production JS
+  - authority: verified-response + verified-code; payment runtime-unverified
+
+- Identical repeated Alfa Online requests can carry different `X-GIB-FGSSCw-...` values. Request path alone is therefore not a sufficient durability scope for all Group-IB headers.
+  - source: full capture sequences 25/42/62/64
+  - authority: verified-runtime evidence
