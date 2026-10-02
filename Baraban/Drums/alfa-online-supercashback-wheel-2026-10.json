@@ -1,13 +1,18 @@
 {
   "id": "alfa-online-supercashback-wheel-2026-10",
   "name": "Альфа-Онлайн — Суперкэшбэк (октябрь 2026)",
-  "description": "Модуль барабана Альфа-Онлайн по capture 02.10.2026. До прокрутки GET wheel-of-fortune возвращает confirmed=false и isWinner=false для всех offers. Победитель определяется только из winnerOffer.id ответа PUT /accept либо GET /wheel-of-fortune/winner после confirmed=true.",
+  "description": "Модуль барабана Альфа-Онлайн по capture 02.10.2026. GET wheel-of-fortune возвращает варианты. PUT /accept выбирает winnerOffer. После первого выигрыша сервер предлагает бесплатную повторную попытку; повторная кнопка сначала обновляет wheel GET, затем пользователь снова запускает PUT /accept. После второй прокрутки сервер предложил следующую попытку за 49 ₽.",
   "loginUrl": "https://web.alfabank.ru/marketplace/?loyaltyType=104",
   "archived": false,
   "variables": {
     "basketOfferId": "21871",
     "confirmed": "false",
-    "winnerOfferId": ""
+    "winnerOfferId": "",
+    "wheelActionTitle": "Крутить скорее!",
+    "reconfirmTitle": "",
+    "reconfirmSubtitle": "",
+    "reconfirmNeedPaid": "",
+    "motivationTitle": ""
   },
   "requests": [
     {
@@ -22,7 +27,8 @@
       },
       "body": "",
       "captures": {
-        "confirmed": "$.confirmed"
+        "confirmed": "$.confirmed",
+        "wheelActionTitle": "$.actionButton.title"
       },
       "autoRun": true,
       "isConfirmation": false
@@ -58,7 +64,11 @@
       },
       "body": "{\n  \"basketOfferId\": \"{{basketOfferId}}\",\n  \"type\": \"DRUM\"\n}",
       "captures": {
-        "winnerOfferId": "$.winnerOffer.id"
+        "winnerOfferId": "$.winnerOffer.id",
+        "reconfirmTitle": "$.reconfirmButton.title",
+        "reconfirmSubtitle": "$.reconfirmButton.subtitle",
+        "reconfirmNeedPaid": "$.reconfirmButton.needPaid",
+        "motivationTitle": "$.motivation.title"
       },
       "autoRun": false,
       "isConfirmation": true
@@ -86,10 +96,23 @@
         "requestId": "acceptWheelOfFortune"
       }
     ],
+    "repeat": [
+      {
+        "requestId": "getWheelOfFortune"
+      }
+    ],
     "prizeResultRequestId": "getWheelOfFortune",
     "stateResultRequestId": "getWheelOfFortuneWinner",
     "winnerVariable": "winnerOfferId",
-    "claimRequiresWinner": false
+    "claimRequiresWinner": false,
+    "prizeOptionsLabel": "Получить варианты призов",
+    "stateLabel": "Состояние барабана",
+    "claimLabel": "Крутить скорее!",
+    "claimLabelVariable": "wheelActionTitle",
+    "repeatTitleVariable": "reconfirmTitle",
+    "repeatSubtitleVariable": "reconfirmSubtitle",
+    "repeatNeedPaidVariable": "reconfirmNeedPaid",
+    "motivationVariable": "motivationTitle"
   },
   "result": {
     "sourceRequestId": "getWheelOfFortune",
