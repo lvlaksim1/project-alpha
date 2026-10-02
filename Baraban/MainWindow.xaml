@@ -428,7 +428,7 @@
                                     Click="OpenBrowser_Click"
                                     Margin="8,0,0,0"/>
                             <Button Grid.Column="2"
-                                    Content="Синхронизировать cookies"
+                                    Content="Синхронизировать профиль"
                                     Click="SyncCookies_Click"
                                     Margin="8,0,0,0"
                                     FontWeight="SemiBold"/>
