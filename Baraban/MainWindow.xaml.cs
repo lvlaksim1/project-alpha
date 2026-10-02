@@ -481,6 +481,20 @@ public partial class MainWindow : Window
         _variables.TryGetValue(actions.WinnerVariable, out var winnerId);
         var title = ResultProjector.ResolvePrizeTitle(_prizeTable, winnerId);
 
+        if (string.IsNullOrWhiteSpace(winnerId) && _prizeTable is not null)
+        {
+            foreach (DataRow row in _prizeTable.Rows)
+            {
+                if (row.Table.Columns.Contains("IsWinner") &&
+                    row["IsWinner"] is true)
+                {
+                    winnerId = Convert.ToString(row["offerDrumId"]) ?? "";
+                    title = Convert.ToString(row["Приз"]) ?? "";
+                    break;
+                }
+            }
+        }
+
         CurrentPrizeText.Text = string.IsNullOrWhiteSpace(winnerId)
             ? "Текущий приз не определён."
             : string.IsNullOrWhiteSpace(title)
