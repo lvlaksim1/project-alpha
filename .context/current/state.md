@@ -5,7 +5,7 @@ Updated: 2026-10-02 MSK
 ## Authority
 - Authoritative repository: `lvlaksim1/project-alpha`.
 - Project Manager context capsule is installed and is the recovery source for future clean chats.
-- Current released application version: `v0.3.14`.
+- Current released application version: `v0.3.15`.
 - Owner's currently confirmed installed version: `v0.3.8`.
 
 ## Application
@@ -18,7 +18,7 @@ Updated: 2026-10-02 MSK
 
 ## Drum modules
 - Current working module: `alfa-friday-tasty-coffee-2026-09-30`.
-- Second active module: `alfa-online-supercashback-wheel-2026-10`, reconstructed from the owner-supplied 2026-10-02 Network Recorder capture for `web.alfabank.ru`.
+- Active Alfa Online modules include `alfa-online-supercashback-wheel-2026-10`, `alfa-online-podruzhka-wheel-2026-10`, and `alfa-online-mvideo-wheel-2026-10-02`, each reconstructed from owner-supplied Network Recorder runtime evidence.
 - Drum modules can now define per-action pipelines for prize options, state and explicit claim, so UI buttons are no longer tied to LoyaltyRouletteService request IDs.
 - Previous `alfa-loyalty-roulette` module is retained as archive/history only; automatic workflow execution is disabled for archived drums.
 - Mutating confirmation remains an explicit user action and must never be auto-run.
@@ -41,7 +41,7 @@ Updated: 2026-10-02 MSK
 - Normal updates are delivered as one self-contained cumulative EXE:
   `ProjectAlpha-Update-to-vX.Y.Z.exe`.
 - Current normal update:
-  `ProjectAlpha-Update-to-v0.3.14.exe` (~2.2 MB).
+  `ProjectAlpha-Update-to-v0.3.15.exe` (~2.2 MB).
 - Owner-side execution of the v0.3.4 updater failed on the real installation with generic exit code 1 despite reconstructed-base CI success.
 - The failure class was traced to Windows PowerShell 5.1 handling of the updater script plus insufficient real-install compatibility assumptions.
 - v0.3.5 remediation includes:
@@ -132,3 +132,13 @@ Updated: 2026-10-02 MSK
 - Manual requests marked `IsConfirmation=true`, and every manually edited method other than GET, require a separate Yes/No confirmation before network transmission.
 - The first v0.3.14 release attempt exposed a repair-mode packaging gap: new mutable drum files could be omitted when an old reconstructed base fell back to repair mode. Repair manifests now package all mutable target files as `seedIfMissing`: absent modules are added, existing user-editable modules are never overwritten.
 - v0.3.14 release run `36962085875` passed cumulative base tests, hybrid repair, compiled Update EXE smoke-test and uninstall preservation. No Actions artifacts were produced.
+
+
+## Podruzhka and MVideo one-shot wheels
+- Owner capture `Browser-Network-20261002-132502.zip` directly records both partner wheels on `web.alfabank.ru/partner-offers/`.
+- Podruzhka: `basketOfferId=22072`; observed options are 100/70/50/30/20%; real PUT /accept returned `winnerOffer.id=22092` = Подружка 50%.
+- MVideo: `basketOfferId=21837`; observed options are 10/20/30/50/70/100%; real PUT /accept returned `winnerOffer.id=21867` = М.ВИДЕО 70%.
+- Both winner responses return `actionButton.title="Отлично"` and `actionButton.type="endActionButton"`; these are terminal one-shot wheels with no repeat path in the capture.
+- v0.3.15 adds both modules and a generic terminal-action contract. When a module-defined terminal variable matches its terminal value, the normal mutating action button is disabled, preventing accidental repeated PUT /accept.
+- Sanitized evidence is stored in `docs/ALFA_ONLINE_PARTNER_WHEELS_2026-10-02.md`; the raw capture is not committed because it contains authenticated session/request material.
+- v0.3.15 release run `36996176531` completed successfully; cumulative base tests, hybrid repair, final Update EXE smoke-test and uninstall preservation passed; no Actions artifacts were produced.
