@@ -5,8 +5,8 @@ Updated: 2026-10-02 MSK
 ## Authority
 - Authoritative repository: `lvlaksim1/project-alpha`.
 - Project Manager context capsule is installed and is the recovery source for future clean chats.
-- Current released application version: `v0.3.8`.
-- Owner's currently confirmed installed version: `v0.3.7`.
+- Current released application version: `v0.3.10`.
+- Owner's currently confirmed installed version: `v0.3.8`.
 
 ## Application
 - Windows desktop client: .NET 8 WPF + WebView2.
@@ -18,6 +18,8 @@ Updated: 2026-10-02 MSK
 
 ## Drum modules
 - Current working module: `alfa-friday-tasty-coffee-2026-09-30`.
+- Second active module: `alfa-online-supercashback-wheel-2026-10`, reconstructed from the owner-supplied 2026-10-02 Network Recorder capture for `web.alfabank.ru`.
+- Drum modules can now define per-action pipelines for prize options, state and explicit claim, so UI buttons are no longer tied to LoyaltyRouletteService request IDs.
 - Previous `alfa-loyalty-roulette` module is retained as archive/history only; automatic workflow execution is disabled for archived drums.
 - Mutating confirmation remains an explicit user action and must never be auto-run.
 
@@ -39,7 +41,7 @@ Updated: 2026-10-02 MSK
 - Normal updates are delivered as one self-contained cumulative EXE:
   `ProjectAlpha-Update-to-vX.Y.Z.exe`.
 - Current normal update:
-  `ProjectAlpha-Update-to-v0.3.8.exe` (~2.1 MB).
+  `ProjectAlpha-Update-to-v0.3.10.exe` (~2.2 MB).
 - Owner-side execution of the v0.3.4 updater failed on the real installation with generic exit code 1 despite reconstructed-base CI success.
 - The failure class was traced to Windows PowerShell 5.1 handling of the updater script plus insufficient real-install compatibility assumptions.
 - v0.3.5 remediation includes:
@@ -61,6 +63,11 @@ Updated: 2026-10-02 MSK
 - v0.3.8 changes prize projection to adaptively locate prize arrays/fields in the real JSON shape and no longer discards rows merely because `offerId` is absent. This directly addresses the observed v0.3.7 empty Result table.
 - JSON rendering now uses relaxed Unicode output and explicit decoding of literal `\\uXXXX` sequences so Russian text is displayed normally.
 - v0.3.8 release run `36951899931` completed successfully; exact manifest `release/manifests/v0.3.8.json` is persisted; no Actions artifacts were produced.
+- v0.3.10 adds multi-mechanism drum support. The new Alfa Online module uses `GET /api/v1/loyalty-view/wheel-of-fortune?basketOfferId=21871` for offers/state, optional `GET .../wheel-of-fortune/winner` for an already-confirmed result, and an explicit user-confirmed `PUT /api/v1/loyalty-view/accept` with `type: DRUM` for the active `NewClick_NewWheelOfFortune` frontend branch.
+- New Alfa Online prize rows come from `offers[]`; winner resolution supports both an explicit winner ID and per-offer `isWinner` flags.
+- Session handling now supports host-scoped reusable headers so credentials/context from `web.alfabank.ru` are not leaked to `link.alfabank.ru`; dynamic `X-GIB-*` headers remain request-specific.
+- Cumulative updater tests now model mutable `Drums/*.json` correctly: existing user-edited modules may be preserved, while newly introduced built-in modules must be seeded. This fixed the v0.3.10 release-gate false failure without weakening immutable SHA verification.
+- v0.3.10 release run `36955307802` completed successfully and produced no Actions artifacts. Update asset SHA-256: `2701ab6ec8621b01de339cd217f2946c2e100e3cdb94ae72979b6737744f2f57`.
 - CI verified all supported exact cumulative base paths, a synthetic mixed-install repair path, the compiled single-file Update EXE, the previous-Setup -> update path, and uninstall user-data preservation.
 - Update application retains temporary backup, rollback on failure, full target SHA-256 verification and application restart.
 ## Installer/uninstaller
