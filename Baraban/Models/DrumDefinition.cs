@@ -75,6 +75,8 @@ public sealed class DrumActionMapping
     public string PaidRepeatPurchasedVariable { get; set; } = "";
     public string TerminalVariable { get; set; } = "";
     public string TerminalEquals { get; set; } = "";
+    public bool AllowClaimAfterTerminal { get; set; }
+    public string TerminalRetryLabel { get; set; } = "Повторить PUT /accept";
 }
 
 public sealed class DrumActionStep
