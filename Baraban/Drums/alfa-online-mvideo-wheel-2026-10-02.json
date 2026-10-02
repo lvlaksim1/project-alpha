@@ -1,0 +1,121 @@
+{
+  "id": "alfa-online-mvideo-wheel-2026-10-02",
+  "name": "Альфа-Онлайн — М.ВИДЕО (02.10.2026)",
+  "description": "Одноразовый барабан М.ВИДЕО по capture 02.10.2026. GET wheel-of-fortune возвращает 6 вариантов 10–100%; PUT /accept выбрал winnerOffer.id=21867 (М.ВИДЕО — 70%). Ответ имеет actionButton.type=endActionButton, поэтому повторная прокрутка блокируется.",
+  "loginUrl": "https://web.alfabank.ru/partner-offers/",
+  "archived": false,
+  "variables": {
+    "basketOfferId": "21837",
+    "confirmed": "false",
+    "winnerOfferId": "",
+    "wheelActionTitle": "Крутить скорее!",
+    "wheelActionType": "startActionButton"
+  },
+  "requests": [
+    {
+      "id": "getWheelOfFortune",
+      "name": "Получить варианты призов / статус барабана",
+      "method": "GET",
+      "url": "https://web.alfabank.ru/api/v1/loyalty-view/wheel-of-fortune?basketOfferId={{basketOfferId}}",
+      "headers": {
+        "Accept": "application/json, text/plain, */*",
+        "Referer": "https://web.alfabank.ru/partner-offers/",
+        "X-SCREEN-DIMENSION": "desktop"
+      },
+      "body": "",
+      "captures": {
+        "confirmed": "$.confirmed",
+        "wheelActionTitle": "$.actionButton.title",
+        "wheelActionType": "$.actionButton.type"
+      },
+      "autoRun": true,
+      "isConfirmation": false
+    },
+    {
+      "id": "getWheelOfFortuneWinner",
+      "name": "Получить уже выбранный приз",
+      "method": "GET",
+      "url": "https://web.alfabank.ru/api/v1/loyalty-view/wheel-of-fortune/winner?basketOfferId={{basketOfferId}}",
+      "headers": {
+        "Accept": "application/json, text/plain, */*",
+        "Referer": "https://web.alfabank.ru/partner-offers/",
+        "X-SCREEN-DIMENSION": "desktop"
+      },
+      "body": "",
+      "captures": {
+        "winnerOfferId": "$.winnerOffer.id",
+        "wheelActionTitle": "$.actionButton.title",
+        "wheelActionType": "$.actionButton.type"
+      },
+      "autoRun": false,
+      "isConfirmation": false
+    },
+    {
+      "id": "acceptWheelOfFortune",
+      "name": "ПРОКРУТИТЬ барабан / получить приз",
+      "method": "PUT",
+      "url": "https://web.alfabank.ru/api/v1/loyalty-view/accept",
+      "headers": {
+        "Accept": "application/json, text/plain, */*",
+        "Content-Type": "application/json",
+        "Origin": "https://web.alfabank.ru",
+        "Referer": "https://web.alfabank.ru/partner-offers/",
+        "X-SCREEN-DIMENSION": "desktop"
+      },
+      "body": "{\n  \"basketOfferId\": \"{{basketOfferId}}\",\n  \"type\": \"DRUM\"\n}",
+      "captures": {
+        "winnerOfferId": "$.winnerOffer.id",
+        "wheelActionTitle": "$.actionButton.title",
+        "wheelActionType": "$.actionButton.type"
+      },
+      "autoRun": false,
+      "isConfirmation": true
+    }
+  ],
+  "actions": {
+    "prizeOptions": [
+      {
+        "requestId": "getWheelOfFortune"
+      }
+    ],
+    "state": [
+      {
+        "requestId": "getWheelOfFortune"
+      },
+      {
+        "requestId": "getWheelOfFortuneWinner",
+        "whenVariable": "confirmed",
+        "whenEquals": "true",
+        "optional": true
+      }
+    ],
+    "claim": [
+      {
+        "requestId": "acceptWheelOfFortune"
+      }
+    ],
+    "prizeResultRequestId": "getWheelOfFortune",
+    "stateResultRequestId": "getWheelOfFortuneWinner",
+    "winnerVariable": "winnerOfferId",
+    "claimRequiresWinner": false,
+    "prizeOptionsLabel": "Получить варианты призов",
+    "stateLabel": "Состояние барабана",
+    "claimLabel": "Крутить скорее!",
+    "claimLabelVariable": "wheelActionTitle",
+    "terminalVariable": "wheelActionType",
+    "terminalEquals": "endActionButton"
+  },
+  "result": {
+    "sourceRequestId": "getWheelOfFortune",
+    "itemsPath": "$.offers",
+    "drumIdPath": "id",
+    "offerIdPath": "",
+    "titlePaths": [
+      "partner",
+      "discount"
+    ],
+    "winnerVariable": "winnerOfferId",
+    "requireOfferId": false,
+    "winnerFlagPath": ""
+  }
+}
