@@ -142,16 +142,26 @@ jobs:
         shell: pwsh
         run: |
           $bases = @(Get-Content .\release-bases.json -Raw | ConvertFrom-Json)
-          $expectedRoot = (Resolve-Path .\publish).Path.TrimEnd('\')
-          $expected = @{}
-          Get-ChildItem -LiteralPath $expectedRoot -File -Recurse | ForEach-Object {
-            $rel = $_.FullName.Substring($expectedRoot.Length).TrimStart('\')
-            $expected[$rel] = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash
+          $targetManifest = Get-Content .\ProjectAlpha-PublishManifest.json -Raw | ConvertFrom-Json
+          $target = @{}
+          foreach ($entry in @($targetManifest.files)) {
+            $rel = ([string]$entry.path).Replace('/', '\')
+            $target[$rel] = [pscustomobject]@{
+              hash = ([string]$entry.sha256).ToUpperInvariant()
+              mutable = [bool]$entry.mutable
+            }
           }
 
           foreach ($base in $bases) {
             $safe = $base.tag -replace '[^A-Za-z0-9._-]', '_'
             $basePublish = Join-Path $PWD ("base-publishes\" + $safe)
+            $baseRoot = (Resolve-Path $basePublish).Path.TrimEnd('\')
+            $baseFiles = @{}
+            Get-ChildItem -LiteralPath $baseRoot -File -Recurse | ForEach-Object {
+              $rel = $_.FullName.Substring($baseRoot.Length).TrimStart('\')
+              $baseFiles[$rel] = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToUpperInvariant()
+            }
+
             $testInstall = Join-Path $PWD ("test-install-" + $safe)
             New-Item -ItemType Directory -Path $testInstall -Force | Out-Null
             Copy-Item -Path (Join-Path $basePublish '*') -Destination $testInstall -Recurse -Force
@@ -167,15 +177,45 @@ jobs:
             $actual = @{}
             Get-ChildItem -LiteralPath $actualRoot -File -Recurse | ForEach-Object {
               $rel = $_.FullName.Substring($actualRoot.Length).TrimStart('\')
-              $actual[$rel] = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash
+              $actual[$rel] = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToUpperInvariant()
             }
 
-            if ($expected.Count -ne $actual.Count) {
-              throw "File-count mismatch after $($base.tag) update: expected $($expected.Count), actual $($actual.Count)"
+            # Immutable target files must always become the exact target version.
+            foreach ($path in $target.Keys) {
+              $entry = $target[$path]
+              if ($entry.mutable) { continue }
+              if (-not $actual.ContainsKey($path)) { throw "Missing immutable target after $($base.tag) update: $path" }
+              if ($actual[$path] -ne $entry.hash) { throw "Immutable hash mismatch after $($base.tag) update: $path" }
             }
-            foreach ($path in $expected.Keys) {
-              if (-not $actual.ContainsKey($path)) { throw "Missing after $($base.tag) update: $path" }
-              if ($actual[$path] -ne $expected[$path]) { throw "Hash mismatch after $($base.tag) update: $path" }
+
+            # No stale immutable file may survive if it is absent from the target.
+            foreach ($path in $actual.Keys) {
+              if ($path.StartsWith('Drums\', [StringComparison]::OrdinalIgnoreCase)) { continue }
+              if (-not $target.ContainsKey($path)) { throw "Unexpected immutable file after $($base.tag) update: $path" }
+            }
+
+            # Mutable module policy:
+            # - an existing module may be preserved or refreshed;
+            # - a module that did not exist in the base must be seeded exactly from target.
+            foreach ($path in $target.Keys) {
+              $entry = $target[$path]
+              if (-not $entry.mutable) { continue }
+
+              if (-not $actual.ContainsKey($path)) {
+                throw "Missing mutable target module after $($base.tag) update: $path"
+              }
+
+              if (-not $baseFiles.ContainsKey($path)) {
+                if ($actual[$path] -ne $entry.hash) {
+                  throw "New mutable module was not seeded from target after $($base.tag) update: $path"
+                }
+              }
+              else {
+                $baseHash = $baseFiles[$path]
+                if ($actual[$path] -ne $baseHash -and $actual[$path] -ne $entry.hash) {
+                  throw "Existing mutable module has an unexpected hash after $($base.tag) update: $path"
+                }
+              }
             }
           }
 
