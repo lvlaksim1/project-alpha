@@ -303,24 +303,110 @@ public partial class MainWindow : Window
         OperationStatusText.Text = "";
     }
 
+    private HttpRequestDefinition BuildEditedRequest()
+    {
+        if (_request is null)
+            throw new InvalidOperationException("Сначала выберите или выполните запрос, который нужно редактировать.");
+
+        var method = MethodBox.Text.Trim().ToUpperInvariant();
+        if (string.IsNullOrWhiteSpace(method))
+            method = _request.Method;
+
+        var url = UrlText.Text.Trim();
+        if (string.IsNullOrWhiteSpace(url))
+            throw new InvalidOperationException("URL запроса не может быть пустым.");
+
+        return new HttpRequestDefinition
+        {
+            Id = _request.Id,
+            Name = _request.Name,
+            Method = method,
+            Url = url,
+            Headers = ParseHeaders(HeadersText.Text),
+            Body = JsonTextFormatter.PrettyOrOriginal(BodyText.Text),
+            Captures = new Dictionary<string, string>(_request.Captures, StringComparer.OrdinalIgnoreCase),
+            AutoRun = _request.AutoRun,
+            IsConfirmation = _request.IsConfirmation
+        };
+    }
+
     private void SaveRequest_Click(object sender, RoutedEventArgs e)
     {
         if (_request is null || _drum is null)
             return;
 
-        _request.Method = MethodBox.Text.Trim().ToUpperInvariant();
-        _request.Url = UrlText.Text.Trim();
-        _request.Headers = ParseHeaders(HeadersText.Text);
-        _request.Body = JsonTextFormatter.PrettyOrOriginal(BodyText.Text);
-        BodyText.Text = _request.Body;
-
-        var path = Path.Combine(DrumsDirectory, $"{_drum.Id}.json");
-        var options = new JsonSerializerOptions(JsonTextFormatter.PrettyOptions)
+        try
         {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        };
-        File.WriteAllText(path, JsonSerializer.Serialize(_drum, options));
-        OperationStatusText.Text = "Параметры запроса сохранены.";
+            var edited = BuildEditedRequest();
+            _request.Method = edited.Method;
+            _request.Url = edited.Url;
+            _request.Headers = edited.Headers;
+            _request.Body = edited.Body;
+            BodyText.Text = edited.Body;
+
+            var path = Path.Combine(DrumsDirectory, $"{_drum.Id}.json");
+            var options = new JsonSerializerOptions(JsonTextFormatter.PrettyOptions)
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            };
+            File.WriteAllText(path, JsonSerializer.Serialize(_drum, options));
+            OperationStatusText.Text = "Параметры запроса сохранены.";
+        }
+        catch (Exception ex)
+        {
+            ShowOperationError(ex);
+        }
+    }
+
+    private async void SendEditedRequest_Click(object sender, RoutedEventArgs e)
+    {
+        if (_request is null)
+            return;
+
+        try
+        {
+            ApplyVariablesFromText();
+            await SyncBrowserSessionIfReadyAsync();
+
+            var edited = BuildEditedRequest();
+            BodyText.Text = edited.Body;
+
+            var isMutating =
+                edited.IsConfirmation ||
+                !edited.Method.Equals("GET", StringComparison.OrdinalIgnoreCase);
+
+            if (isMutating)
+            {
+                var confirmation = MessageBox.Show(
+                    this,
+                    $"Отправить отредактированный запрос?\n\n" +
+                    $"{edited.Method} {edited.Url}\n\n" +
+                    "Запрос может изменить данные на сервере.",
+                    "Подтверждение ручной отправки",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+
+                if (confirmation != MessageBoxResult.Yes)
+                    return;
+            }
+
+            OperationStatusText.Text = $"Отправляю вручную: {edited.Method} {edited.Name}...";
+            var result = await _executor.SendAsync(edited, _session, _variables);
+            _results[edited.Id] = result;
+            WorkflowRunner.Capture(edited, result.ResponseBody, _variables);
+
+            RenderVariables();
+            RenderHttpResponse(result);
+            RenderPrizeOptions();
+            UpdateActionPresentation();
+
+            OperationStatusText.Text =
+                $"Ручной запрос выполнен: HTTP {result.StatusCode} {result.ReasonPhrase}.";
+        }
+        catch (Exception ex)
+        {
+            ShowOperationError(ex);
+        }
     }
 
     private async Task<HttpRunResult> ExecuteRequestAsync(
