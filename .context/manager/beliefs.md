@@ -173,3 +173,23 @@
 - Terminal behavior is module data, not partner-specific UI logic. Project Alpha supports a module-defined terminal variable/value pair so future one-shot wheels can disable their mutating action without hard-coded partner names.
   - source: v0.3.15 architecture
   - authority: implemented-and-verified-ci
+
+- Owner directive supersedes the previous terminal-wheel UI restriction for Подружка and М.ВИДЕО: after `endActionButton`, the normal UI must still expose a user-confirmed second `PUT /accept`. The capture does not establish what the server will return.
+  - source: owner directive, 2026-10-02
+  - authority: owner-directive
+
+- Authorization must survive Project Alpha restarts and support multiple named profiles. v0.3.16 stores each profile separately under DPAPI, persists the active profile, and migrates the legacy single session into **Основной**.
+  - source: owner directive + v0.3.16 implementation
+  - authority: owner-directive + verified-ci
+
+- Session durability requires preserving live browser state, not only an imported snapshot. v0.3.16 synchronizes rotating cookies after relevant browser responses, current local/session storage after navigation/manual sync, and `Set-Cookie` values returned to direct HTTP calls.
+  - source: v0.3.16 implementation
+  - authority: verified-code + verified-ci
+
+- All four supplied Alfa Online captures contain the enabled production feature flag `authExpiredRefreshToken`, plus long-lived fast-login/device credentials and a shorter-lived working auth session, but none records the actual expiry/refresh request. No refresh endpoint/body may be inferred from the flag alone.
+  - source: owner-supplied captures 045909, 054552, 061155, 132502
+  - authority: verified-capture evidence
+
+- The observed Alfa working token has approximately a 12-hour iat-to-exp interval, while fast-login/device state persists substantially longer. Restoring the real site with this preserved state is the evidence-based way to give its own silent refresh logic a chance to operate until an actual refresh exchange is captured.
+  - source: sanitized token metadata + capture cookie/storage metadata
+  - authority: verified-capture evidence
