@@ -278,6 +278,7 @@ public sealed class CaptureZipImporter(SessionStore store)
     private static bool IsSessionHeader(string header) =>
         header.Equals("Authorization", StringComparison.OrdinalIgnoreCase)
         || header.Equals("X-CSRF-Token", StringComparison.OrdinalIgnoreCase)
+        || header.Equals("X-XSRF-TOKEN", StringComparison.OrdinalIgnoreCase)
         || header.StartsWith("X-GIB-", StringComparison.OrdinalIgnoreCase)
         || header.StartsWith("X-B3-", StringComparison.OrdinalIgnoreCase)
         || header.Equals("X-Request-ID", StringComparison.OrdinalIgnoreCase);
