@@ -147,3 +147,15 @@
 - After the observed paid purchase, the subsequent spin returned winner 21931 (Аптеки 7%) and again exposed a paid repeat offer, so the paid cycle can recur.
   - source: paid-repeat capture
   - authority: verified-runtime evidence
+
+- The owner requires the advanced last-request editor to support a one-shot **Отправить** action for the currently edited Method / URL / Headers / Body, distinct from **Сохранить параметры**. Sending must not silently persist the edits to the module.
+  - source: owner directive, 2026-10-02
+  - authority: owner-directive
+
+- Manual edited requests may be mutating even when the original request was not, because Method is editable. Therefore v0.3.14 requires explicit confirmation for `IsConfirmation=true` requests and for every manually edited non-GET method.
+  - source: v0.3.14 implementation safety boundary
+  - authority: implemented-and-verified-ci
+
+- Repair-mode distribution of mutable built-in modules uses seed-if-missing semantics: all target mutable module files are available in the repair payload, but are copied only when absent. Existing user-editable module files are never overwritten by repair seeding.
+  - source: v0.3.14 release-gate remediation
+  - authority: verified-ci
