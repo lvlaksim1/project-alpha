@@ -1,0 +1,107 @@
+{
+  "id": "alfa-online-supercashback-wheel-2026-10",
+  "name": "Альфа-Онлайн — Суперкэшбэк (октябрь 2026)",
+  "description": "Модуль нового барабана web.alfabank.ru по capture 02.10.2026. Список секторов приходит из wheel-of-fortune; актуальная ветка фронта NewClick_NewWheelOfFortune подтверждает вращение через PUT /accept.",
+  "loginUrl": "https://web.alfabank.ru/marketplace/?loyaltyType=104",
+  "archived": false,
+  "variables": {
+    "basketOfferId": "21871",
+    "confirmed": "false",
+    "winnerOfferId": ""
+  },
+  "requests": [
+    {
+      "id": "getWheelOfFortune",
+      "name": "Получить варианты призов / статус барабана",
+      "method": "GET",
+      "url": "https://web.alfabank.ru/api/v1/loyalty-view/wheel-of-fortune?basketOfferId={{basketOfferId}}",
+      "headers": {
+        "Accept": "application/json, text/plain, */*",
+        "Referer": "https://web.alfabank.ru/marketplace/?loyaltyType=104",
+        "X-SCREEN-DIMENSION": "desktop"
+      },
+      "body": "",
+      "captures": {
+        "confirmed": "$.confirmed"
+      },
+      "autoRun": true,
+      "isConfirmation": false
+    },
+    {
+      "id": "getWheelOfFortuneWinner",
+      "name": "Получить уже выбранный приз",
+      "method": "GET",
+      "url": "https://web.alfabank.ru/api/v1/loyalty-view/wheel-of-fortune/winner?basketOfferId={{basketOfferId}}",
+      "headers": {
+        "Accept": "application/json, text/plain, */*",
+        "Referer": "https://web.alfabank.ru/marketplace/?loyaltyType=104",
+        "X-SCREEN-DIMENSION": "desktop"
+      },
+      "body": "",
+      "captures": {
+        "winnerOfferId": "$.winnerOffer.id"
+      },
+      "autoRun": false,
+      "isConfirmation": false
+    },
+    {
+      "id": "acceptWheelOfFortune",
+      "name": "ПОЛУЧИТЬ приз / запустить барабан",
+      "method": "PUT",
+      "url": "https://web.alfabank.ru/api/v1/loyalty-view/accept",
+      "headers": {
+        "Accept": "application/json, text/plain, */*",
+        "Content-Type": "application/json",
+        "Origin": "https://web.alfabank.ru",
+        "Referer": "https://web.alfabank.ru/marketplace/?loyaltyType=104",
+        "X-SCREEN-DIMENSION": "desktop"
+      },
+      "body": "{\n  \"basketOfferId\": \"{{basketOfferId}}\",\n  \"type\": \"DRUM\"\n}",
+      "captures": {
+        "winnerOfferId": "$.winnerOffer.id"
+      },
+      "autoRun": false,
+      "isConfirmation": true
+    }
+  ],
+  "actions": {
+    "prizeOptions": [
+      {
+        "requestId": "getWheelOfFortune"
+      }
+    ],
+    "state": [
+      {
+        "requestId": "getWheelOfFortune"
+      },
+      {
+        "requestId": "getWheelOfFortuneWinner",
+        "whenVariable": "confirmed",
+        "whenEquals": "true",
+        "optional": true
+      }
+    ],
+    "claim": [
+      {
+        "requestId": "acceptWheelOfFortune"
+      }
+    ],
+    "prizeResultRequestId": "getWheelOfFortune",
+    "stateResultRequestId": "getWheelOfFortuneWinner",
+    "winnerVariable": "winnerOfferId",
+    "claimRequiresWinner": false
+  },
+  "result": {
+    "sourceRequestId": "getWheelOfFortune",
+    "itemsPath": "$.offers",
+    "drumIdPath": "id",
+    "offerIdPath": "",
+    "titlePaths": [
+      "discount",
+      "partner",
+      "description"
+    ],
+    "winnerVariable": "winnerOfferId",
+    "requireOfferId": false
+  }
+}
