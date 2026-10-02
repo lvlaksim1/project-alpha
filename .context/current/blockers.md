@@ -1,9 +1,9 @@
 # Current blockers and open risks
 
-1. Project Alpha still needs owner-side end-to-end runtime verification with the latest Alfa Online captures after the v0.3.13 implementation.
-2. IndexedDB and Cache Storage are not restored. Add them only if live testing proves they are required for session continuity.
-3. Multiple captures prove `X-GIB-FGSSCw-...` changes between otherwise identical requests, including GET, PUT and the paid POST. Imported request-specific security values may therefore have server freshness/replay limits. Do not synthesize or bypass them; obtain fresh legitimate browser evidence if replay is rejected.
-4. Free and paid Alfa Online repeat mechanics are now directly capture-grounded. The remaining risk is whether Project Alpha's replay with imported session/request profiles is accepted by the live server.
-5. App-side testing of the paid path has a real monetary effect (49 ₽ in the observed flow). It must remain explicit and must never be invoked automatically or as part of a non-mutating workflow.
-6. Current Alfa-Friday module still needs live regression verification after the multi-mechanism changes.
-7. All mutating/payment requests must remain explicit and separated from discovery/visualization.
+1. Named authorization profiles and strengthened browser-state persistence are release-verified but still need owner-side runtime verification across real close/reopen and account switching.
+2. The actual Alfa Online refresh-token exchange is not present in any supplied capture. Only the enabled `authExpiredRefreshToken` feature flag and long-lived fast-login/device inputs are observed. A capture spanning real token expiry is required before implementing a direct refresh API.
+3. IndexedDB and Cache Storage are still not copied into SessionProfile. Add them only if runtime profile/refresh testing proves they are required.
+4. Multiple captures prove request-specific Group-IB/security values change between otherwise identical requests. Do not synthesize or bypass them; obtain fresh legitimate browser evidence when replay is rejected.
+5. A second PUT after `endActionButton` for Подружка/М.ВИДЕО is intentionally exposed by owner directive, but the server outcome is unknown. It remains an explicit confirmed action and must never auto-run.
+6. Paid Supercashback retry has a real monetary effect and must remain explicit.
+7. Existing Alfa-Friday and Supercashback flows need regression verification after the session/profile changes.
