@@ -68,3 +68,7 @@
 - Release v0.3.5 is verified end-to-end in CI: cumulative legacy-base tests pass, the synthetic mixed-install repair test passes, the compiled Update EXE passes previous-Setup update/uninstall-preservation testing, Repository Hygiene succeeds, and the release run produced no Actions artifacts.
   - source: GitHub Actions release run 36938695823; Repository Hygiene run 36938956222
   - authority: verified-ci
+
+- The corrected `ProjectAlpha-Update-to-v0.3.5.exe` successfully updated the owner's real installation that had failed with v0.3.4.
+  - source: owner runtime confirmation, 2026-10-02
+  - authority: owner-observed runtime
