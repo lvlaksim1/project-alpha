@@ -5,7 +5,7 @@ Updated: 2026-10-02 MSK
 ## Authority
 - Authoritative repository: `lvlaksim1/project-alpha`.
 - Project Manager context capsule is installed and is the recovery source for future clean chats.
-- Current released application version: `v0.3.12`.
+- Current released application version: `v0.3.13`.
 - Owner's currently confirmed installed version: `v0.3.8`.
 
 ## Application
@@ -41,7 +41,7 @@ Updated: 2026-10-02 MSK
 - Normal updates are delivered as one self-contained cumulative EXE:
   `ProjectAlpha-Update-to-vX.Y.Z.exe`.
 - Current normal update:
-  `ProjectAlpha-Update-to-v0.3.12.exe` (~2.2 MB).
+  `ProjectAlpha-Update-to-v0.3.13.exe` (~2.2 MB).
 - Owner-side execution of the v0.3.4 updater failed on the real installation with generic exit code 1 despite reconstructed-base CI success.
 - The failure class was traced to Windows PowerShell 5.1 handling of the updater script plus insufficient real-install compatibility assumptions.
 - v0.3.5 remediation includes:
@@ -108,7 +108,18 @@ Updated: 2026-10-02 MSK
 - Clicking `Крутить ещё` did not call a special mutation. It triggered a fresh wheel GET; that GET returned `confirmed=true` while all offer flags still remained false.
 - Second `PUT /accept` returned `winnerOffer.id=21940` = `Такси — 7%`.
 - After the second spin the server offered another repeat with `needPaid=true`, subtitle `за 49 ₽`, and a payment `modalView.order`.
-- Captured production JS maps paid repeat purchase to `POST /api/v1/loyalty-view/offer`, but the owner did not click the payment-confirmation button in the capture. Project Alpha therefore detects/displays the paid repeat but does not send that payment automatically.
+- A later full paid-repeat capture directly records the payment confirmation request: `POST /api/v1/loyalty-view/offer` with the exact server-supplied `reconfirmButton.modalView.order` object. The response is HTTP 200, `success=true`, amount 49 RUR, and button `Крутить скорее!`.
 - The two observed identical PUT requests used different `X-GIB-FGSSCw-...` values, confirming that at least that Group-IB header is occurrence-specific rather than a durable request-profile token.
 - v0.3.12 implements dynamic action labels, the observed free reroll state machine, safe loss-warning before forfeiting the first result, automatic return to `Крутить скорее!`, and migration of already-installed Alfa Online module JSON without overwriting unrelated user edits.
 - v0.3.12 release run `36957895354` completed successfully; cumulative base tests, hybrid repair, compiled Update EXE smoke-test and uninstall preservation all passed; the release produced no Actions artifacts.
+
+
+## Alfa Online paid-repeat runtime evidence
+- Owner capture `Browser-Network-20261002-061155.zip` directly records **Крутить ещё — за 49 ₽ → Подтвердить → POST /api/v1/loyalty-view/offer**.
+- The payment request body is the full account-specific `reconfirmButton.modalView.order` object supplied by the previous winner response. Project Alpha does not hard-code the owner's loyalty/account identifiers into the public module.
+- Payment response: HTTP 200, `type=buy-offer`, `direction=EXPENSE`, `success=true`, 49 RUR, button `Крутить скорее!`.
+- After payment, the next `Крутить скорее!` produces a wheel GET/reset; the following `Крутить скорее!` performs normal `PUT /accept`.
+- The observed paid spin returned `winnerOffer.id=21931` = `Аптеки — 7%` and again advertised another paid repeat.
+- v0.3.13 implements a generic paid-repeat pipeline. It extracts the entire payment order at runtime, requires explicit Yes/No confirmation before the real debit, requires both HTTP 2xx and `success=true`, and never retries the POST automatically as part of the subsequent wheel-reset step.
+- v0.3.13 migrates already-installed Alfa Online module JSON by adding only the required paid-repeat variables/request/action mappings while preserving unrelated user edits.
+- Release run `36959665060` completed successfully; cumulative bases, hybrid repair, final Update EXE smoke test and uninstall preservation passed; no Actions artifacts were produced. Repository Hygiene run `36959917957` completed successfully.
