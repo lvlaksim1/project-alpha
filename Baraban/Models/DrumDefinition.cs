@@ -73,6 +73,8 @@ public sealed class DrumActionMapping
     public string PaidRepeatOrderVariable { get; set; } = "";
     public string PaidRepeatSuccessVariable { get; set; } = "";
     public string PaidRepeatPurchasedVariable { get; set; } = "";
+    public string TerminalVariable { get; set; } = "";
+    public string TerminalEquals { get; set; } = "";
 }
 
 public sealed class DrumActionStep
