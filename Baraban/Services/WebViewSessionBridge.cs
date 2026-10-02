@@ -30,7 +30,22 @@ public sealed class WebViewSessionBridge(SessionStore store)
                         continue;
 
                     observed[header.Key] = header.Value;
-                    session.Headers[header.Key] = header.Value;
+
+                    if (IsReusableGlobalHeader(header.Key))
+                        session.Headers[header.Key] = header.Value;
+
+                    if (IsReusableHostHeader(header.Key) &&
+                        Uri.TryCreate(args.Request.Uri, UriKind.Absolute, out var observedUri))
+                    {
+                        if (!session.HostHeaders.TryGetValue(observedUri.Host, out var hostHeaders))
+                        {
+                            hostHeaders = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                            session.HostHeaders[observedUri.Host] = hostHeaders;
+                        }
+
+                        hostHeaders[header.Key] = header.Value;
+                    }
+
                     observedHeader?.Invoke(header.Key);
                 }
 
@@ -202,4 +217,13 @@ public sealed class WebViewSessionBridge(SessionStore store)
         || header.Equals("Accept-Language", StringComparison.OrdinalIgnoreCase)
         || header.Equals("User-Agent", StringComparison.OrdinalIgnoreCase)
         || header.StartsWith("sec-ch-", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsReusableGlobalHeader(string header) =>
+        header.Equals("Authorization", StringComparison.OrdinalIgnoreCase)
+        || header.Equals("X-CSRF-Token", StringComparison.OrdinalIgnoreCase)
+        || header.Equals("Accept-Language", StringComparison.OrdinalIgnoreCase)
+        || header.Equals("User-Agent", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsReusableHostHeader(string header) =>
+        header.Equals("X-XSRF-TOKEN", StringComparison.OrdinalIgnoreCase);
 }
