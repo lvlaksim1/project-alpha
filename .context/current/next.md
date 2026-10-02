@@ -1,10 +1,11 @@
 # Next actions
 
-1. Owner: update the confirmed v0.3.8 installation with `ProjectAlpha-Update-to-v0.3.10.exe`.
-2. Confirm that the new module **«Альфа-Онлайн — Суперкэшбэк (октябрь 2026)»** appears in the left drum list. The cumulative updater is specifically tested to seed newly introduced modules into older installations.
-3. Import the supplied/fresh Alfa Online Network Recorder ZIP through **Сессия → Импорт capture ZIP** so the `web.alfabank.ru` cookies, exact GET-wheel request profile, XSRF/device context and browser storage become the active session.
-4. Select the new Alfa Online module and press **Получить варианты призов**. Verify the 10 observed offers render by human-readable category + discount and that Unicode/emoji are readable.
-5. Press **Состояние барабана**. Before a spin, `confirmed=false` may legitimately mean no current prize. If already confirmed, resolve the winner via winner ID/`isWinner` and show its human-readable name.
-6. Test **Получить приз** only when the owner intentionally wants the server-side wheel mutation. v0.3.10 maps the captured active frontend branch to `PUT /api/v1/loyalty-view/accept` with `type: "DRUM"`, but this exact request was not present in the supplied capture, so its first real execution is the validation checkpoint.
-7. If the claim fails because of security headers, capture the real browser click on **«Крутить скорее!»** with Network Recorder and adapt from that evidence; do not synthesize dynamic `X-GIB` values.
-8. Keep the existing Alfa-Friday module regression-safe while validating the new cabinet.
+1. Owner: update the current installation with `ProjectAlpha-Update-to-v0.3.12.exe`.
+2. Import the new full capture `Browser-Network-20261002-054552.zip` through **Сессия → Импорт capture ZIP**.
+3. Select **«Альфа-Онлайн — Суперкэшбэк (октябрь 2026)»** and verify **Получить варианты призов** still renders the ten observed offers.
+4. Verify the primary action button is **«Крутить скорее!»**, not generic **«Получить приз»**.
+5. On an intentional real spin, verify `winnerOffer.id` is captured and the matching prize row/name is shown.
+6. If the response offers the observed free repeat, verify the button changes to **«Крутить ещё — 1 попытка»**. Confirming it must warn that the previous result will be lost, perform the observed wheel GET reset, clear the previous winner in the UI, and return the button to **«Крутить скорее!»**.
+7. A second real spin should replace the previous winner. If the response offers **«Крутить ещё — за 49 ₽»**, Project Alpha must only display/explain the paid option; no payment request is sent automatically.
+8. If Alfa Online PUT replay fails because of freshness/security headers, capture that failure/current browser request. Do not synthesize dynamic Group-IB values; the full capture already proves `X-GIB-FGSSCw-...` changes between identical PUT requests.
+9. Regression-check the existing Alfa-Friday module after the new-cabinet validation.
