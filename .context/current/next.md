@@ -1,8 +1,10 @@
 # Next actions
 
-1. Owner: apply `ProjectAlpha-Update-to-v0.3.7.exe` to the currently installed Project Alpha and verify the redesigned UI: title version, scrollbars, moved `Запустить цепочку` button, no visible log panel, and the new HTTP response table.
-2. Import a fresh ZIP produced by the recorder extension through the Session tab.
-3. Verify restored cookies, request profiles, localStorage/sessionStorage and authenticated WebView2 state.
-4. Run the current Alfa-Friday non-confirming chain and verify that the Result tab now produces the intended table rather than an unexplained empty area.
-5. If Result remains empty after a successful chain, inspect the actual `getOfferDrums` JSON response and correct the module's result mapping from observed runtime data.
-6. Keep `confirmDrumOffer` explicit; test it only after the non-mutating chain is verified.
+1. Owner: apply `ProjectAlpha-Update-to-v0.3.8.exe` to the confirmed v0.3.7 installation.
+2. Verify that the main window no longer scrolls horizontally as a whole; scrollbars must exist only inside data fields/tables, and the Result/HTTP splitters must resize pane heights by mouse.
+3. Verify `Ctrl+F` search in JSON fields and result/HTTP tables.
+4. On the HTTP tab, press `Получить варианты призов` and confirm that the prize list is populated with readable Russian text.
+5. Press `Состояние барабана`; confirm that the prize list remains visible and the current prize is shown by name by matching `offerWinId` to the prize list.
+6. Verify the Result tab / `Запустить цепочку` now populates the same prize table. If it is still empty, use the now-readable real `getOfferDrums` response to refine the adaptive projection against observed runtime data.
+7. Test `Получить приз` only when the owner intentionally wants to send the explicit confirmation request; keep the Yes/No confirmation barrier.
+8. Continue end-to-end recorder ZIP / authenticated WebView2 verification after the v0.3.8 UI/runtime checkpoint.
