@@ -5,7 +5,7 @@ Updated: 2026-10-02 MSK
 ## Authority
 - Authoritative repository: `lvlaksim1/project-alpha`.
 - Project Manager context capsule is installed and is the recovery source for future clean chats.
-- Current released application version: `v0.3.10`.
+- Current released application version: `v0.3.12`.
 - Owner's currently confirmed installed version: `v0.3.8`.
 
 ## Application
@@ -41,7 +41,7 @@ Updated: 2026-10-02 MSK
 - Normal updates are delivered as one self-contained cumulative EXE:
   `ProjectAlpha-Update-to-vX.Y.Z.exe`.
 - Current normal update:
-  `ProjectAlpha-Update-to-v0.3.10.exe` (~2.2 MB).
+  `ProjectAlpha-Update-to-v0.3.12.exe` (~2.2 MB).
 - Owner-side execution of the v0.3.4 updater failed on the real installation with generic exit code 1 despite reconstructed-base CI success.
 - The failure class was traced to Windows PowerShell 5.1 handling of the updater script plus insufficient real-install compatibility assumptions.
 - v0.3.5 remediation includes:
@@ -66,11 +66,11 @@ Updated: 2026-10-02 MSK
 - Owner confirmed the v0.3.8 UI is almost ideal and supplied a second Network Recorder capture from a different Alfa Online cabinet/mechanism: `web.alfabank.ru/marketplace/?loyaltyType=104`.
 - The new capture directly observes `GET /api/v1/loyalty-view/wheel-of-fortune?basketOfferId=21871`, whose response contains `offers[]` with `id`, `discount`, `partner`, descriptions, `isWinner`, and top-level `confirmed`.
 - Captured production JavaScript defines both legacy and new wheel mutations. The captured page has `NewClick_NewWheelOfFortune` enabled, so its active branch uses `PUT /api/v1/loyalty-view/accept` with `basketOfferId` and `type: "DRUM"`; confirmed panels use `GET /wheel-of-fortune/winner`.
-- v0.3.10 adds the Alfa Online Supercashback module, generic per-drum prize/state/claim pipelines, claim flows where the winner is chosen server-side, winner detection from either winner ID or response `isWinner`, host-scoped stable Alfa Online headers, and preservation of request-specific dynamic security headers.
+- v0.3.10 introduced the Alfa Online Supercashback module and generic per-drum prize/state/claim pipelines. Subsequent runtime evidence proved that `offers[].isWinner` is not a winner authority for this mechanism.
 - The raw owner capture is not stored in Git because it contains authentication/session material. Sanitized evidence is documented in `docs/ALFA_ONLINE_SUPERCASHBACK_WHEEL_2026-10.md`.
 - v0.3.10 release run `36955307802` completed successfully after correcting cumulative smoke-test semantics for mutable modules. The updater verifies immutable target files exactly, preserves or refreshes existing mutable modules, and requires newly introduced modules to be seeded into legacy installations. Exact manifest `release/manifests/v0.3.10.json` is persisted and the release produced no Actions artifacts.
 - v0.3.10 adds multi-mechanism drum support. The new Alfa Online module uses `GET /api/v1/loyalty-view/wheel-of-fortune?basketOfferId=21871` for offers/state, optional `GET .../wheel-of-fortune/winner` for an already-confirmed result, and an explicit user-confirmed `PUT /api/v1/loyalty-view/accept` with `type: DRUM` for the active `NewClick_NewWheelOfFortune` frontend branch.
-- New Alfa Online prize rows come from `offers[]`; winner resolution supports both an explicit winner ID and per-offer `isWinner` flags.
+- New Alfa Online prize rows come from `offers[]`; the authoritative winner is `winnerOffer.id` returned by `PUT /accept` or the dedicated winner GET. In both observed real spins every `offers[].isWinner` remained `false`.
 - Session handling now supports host-scoped reusable headers so credentials/context from `web.alfabank.ru` are not leaked to `link.alfabank.ru`; dynamic `X-GIB-*` headers remain request-specific.
 - Cumulative updater tests now model mutable `Drums/*.json` correctly: existing user-edited modules may be preserved, while newly introduced built-in modules must be seeded. This fixed the v0.3.10 release-gate false failure without weakening immutable SHA verification.
 - v0.3.10 release run `36955307802` completed successfully and produced no Actions artifacts. Update asset SHA-256: `2701ab6ec8621b01de339cd217f2946c2e100e3cdb94ae72979b6737744f2f57`.
@@ -99,3 +99,16 @@ Updated: 2026-10-02 MSK
 - Current Release contains only:
   - cumulative Update EXE;
   - full Setup EXE fallback.
+
+
+## Alfa Online two-spin runtime evidence
+- Full owner capture `Browser-Network-20261002-054552.zip` directly records two real spins and one free repeat transition.
+- Initial GET `/wheel-of-fortune?basketOfferId=21871`: `confirmed=false`, ten offers, all `isWinner=false`, button `Крутить скорее!`.
+- First `PUT /loyalty-view/accept` with `{"basketOfferId":"21871","type":"DRUM"}` returned `winnerOffer.id=21937` = `Цифровые товары — 7%`, plus `Крутить ещё`, `needPaid=false`, `1 попытка`.
+- Clicking `Крутить ещё` did not call a special mutation. It triggered a fresh wheel GET; that GET returned `confirmed=true` while all offer flags still remained false.
+- Second `PUT /accept` returned `winnerOffer.id=21940` = `Такси — 7%`.
+- After the second spin the server offered another repeat with `needPaid=true`, subtitle `за 49 ₽`, and a payment `modalView.order`.
+- Captured production JS maps paid repeat purchase to `POST /api/v1/loyalty-view/offer`, but the owner did not click the payment-confirmation button in the capture. Project Alpha therefore detects/displays the paid repeat but does not send that payment automatically.
+- The two observed identical PUT requests used different `X-GIB-FGSSCw-...` values, confirming that at least that Group-IB header is occurrence-specific rather than a durable request-profile token.
+- v0.3.12 implements dynamic action labels, the observed free reroll state machine, safe loss-warning before forfeiting the first result, automatic return to `Крутить скорее!`, and migration of already-installed Alfa Online module JSON without overwriting unrelated user edits.
+- v0.3.12 release run `36957895354` completed successfully; cumulative base tests, hybrid repair, compiled Update EXE smoke-test and uninstall preservation all passed; the release produced no Actions artifacts.
