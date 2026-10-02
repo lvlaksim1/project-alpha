@@ -9,6 +9,7 @@ public sealed class DrumDefinition
     public bool Archived { get; set; }
     public Dictionary<string, string> Variables { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public List<HttpRequestDefinition> Requests { get; set; } = [];
+    public DrumActionMapping? Actions { get; set; }
     public ResultMapping? Result { get; set; }
 
     public override string ToString() => Archived ? $"[АРХИВ] {Name}" : Name;
@@ -47,3 +48,22 @@ public sealed record HttpRunResult(
     string ResponseBody,
     Dictionary<string, string> ResponseHeaders,
     DateTimeOffset CompletedUtc);
+
+
+public sealed class DrumActionMapping
+{
+    public List<DrumActionStep> PrizeOptions { get; set; } = [];
+    public List<DrumActionStep> State { get; set; } = [];
+    public List<DrumActionStep> Claim { get; set; } = [];
+    public string PrizeResultRequestId { get; set; } = "";
+    public string StateResultRequestId { get; set; } = "";
+    public string WinnerVariable { get; set; } = "offerWinId";
+}
+
+public sealed class DrumActionStep
+{
+    public string RequestId { get; set; } = "";
+    public string WhenVariable { get; set; } = "";
+    public string WhenEquals { get; set; } = "";
+    public bool Optional { get; set; }
+}
