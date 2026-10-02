@@ -48,7 +48,7 @@ The response contains:
 - `actionButton.title="Отлично"`;
 - `actionButton.type="endActionButton"`.
 
-This is a terminal one-shot result; Project Alpha must not send another claim PUT from the normal action button after this response.
+This is a server-declared terminal one-shot result. Starting with v0.3.16, Project Alpha still exposes an explicit **Повторить PUT /accept** action in the normal UI at the owner's request. It remains user-confirmed and is intentionally marked as a forced repeat because the capture does not prove the server will award a second result.
 
 ## М.ВИДЕО
 
@@ -93,7 +93,7 @@ The response contains:
 - `actionButton.title="Отлично"`;
 - `actionButton.type="endActionButton"`.
 
-This is also a terminal one-shot result.
+This is also a server-declared terminal one-shot result. v0.3.16 permits an explicit, confirmed second PUT from the normal UI so the server's actual behavior can be tested.
 
 ## Common implementation
 
@@ -104,6 +104,6 @@ Both modules use the existing generic Alfa Online wheel contract:
 - winner authority: `winnerOffer.id`;
 - result rows: `offers[]`, title = `partner + discount`.
 
-The modules capture `actionButton.type`. When it becomes `endActionButton`, the normal spin button is disabled. This prevents a second accidental PUT for one-shot partner wheels.
+The modules capture `actionButton.type`. When it becomes `endActionButton`, the normal action changes to **Повторить PUT /accept** for these two modules. The second request is never automatic and still requires confirmation.
 
 Dynamic Group-IB/security headers remain request-specific evidence. Project Alpha does not synthesize them.
