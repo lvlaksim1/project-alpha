@@ -64,6 +64,7 @@ public sealed class HttpExecutor
         }
 
         using var response = await client.SendAsync(request, HttpCompletionOption.ResponseContentRead, cancellationToken);
+        ApplyResponseCookies(session, response.RequestMessage?.RequestUri ?? uri, response);
         var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
         var headers = response.Headers.Concat(response.Content.Headers)
             .GroupBy(x => x.Key, StringComparer.OrdinalIgnoreCase)
@@ -76,6 +77,56 @@ public sealed class HttpExecutor
             responseBody,
             headers,
             DateTimeOffset.UtcNow);
+    }
+
+
+    private static void ApplyResponseCookies(
+        SessionProfile session,
+        Uri uri,
+        HttpResponseMessage response)
+    {
+        if (!response.Headers.TryGetValues("Set-Cookie", out var values))
+            return;
+
+        var jar = new CookieContainer();
+        foreach (var value in values)
+        {
+            try
+            {
+                jar.SetCookies(uri, value);
+            }
+            catch
+            {
+            }
+        }
+
+        foreach (Cookie cookie in jar.GetCookies(uri))
+        {
+            var domain = string.IsNullOrWhiteSpace(cookie.Domain) ? uri.Host : cookie.Domain;
+            var path = string.IsNullOrWhiteSpace(cookie.Path) ? "/" : cookie.Path;
+
+            session.Cookies.RemoveAll(existing =>
+                existing.Name.Equals(cookie.Name, StringComparison.OrdinalIgnoreCase) &&
+                existing.Domain.TrimStart('.').Equals(domain.TrimStart('.'), StringComparison.OrdinalIgnoreCase) &&
+                existing.Path.Equals(path, StringComparison.Ordinal));
+
+            if (cookie.Expired || (cookie.Expires != DateTime.MinValue && cookie.Expires.ToUniversalTime() <= DateTime.UtcNow))
+                continue;
+
+            session.Cookies.Add(new StoredCookie
+            {
+                Name = cookie.Name,
+                Value = cookie.Value,
+                Domain = domain,
+                Path = path,
+                ExpiresUtc = cookie.Expires == DateTime.MinValue
+                    ? null
+                    : new DateTimeOffset(DateTime.SpecifyKind(cookie.Expires.ToUniversalTime(), DateTimeKind.Utc)),
+                IsHttpOnly = cookie.HttpOnly,
+                IsSecure = cookie.Secure,
+                SameSite = ""
+            });
+        }
     }
 
     private static string BuildCookieHeader(SessionProfile session, Uri uri)
