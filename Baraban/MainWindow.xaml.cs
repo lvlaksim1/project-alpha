@@ -110,13 +110,23 @@ public partial class MainWindow : Window
         GetDrumStateButton.IsEnabled =
             active && actions.State.Count > 0 && HasAvailablePipeline(actions.State);
 
-        var hasClaim = actions.Claim.Count > 0 && HasAvailablePipeline(actions.Claim);
-        var hasRepeat = HasRepeatOffer(actions) && actions.Repeat.Count > 0 && HasAvailablePipeline(actions.Repeat);
+        var terminal = IsTerminalAction(actions);
+        var hasClaim =
+            !terminal &&
+            actions.Claim.Count > 0 &&
+            HasAvailablePipeline(actions.Claim);
+        var hasRepeat =
+            !terminal &&
+            HasRepeatOffer(actions) &&
+            actions.Repeat.Count > 0 &&
+            HasAvailablePipeline(actions.Repeat);
         var hasPaidRepeat =
+            !terminal &&
             HasPaidRepeatOffer(actions) &&
             actions.PaidRepeat.Count > 0 &&
             HasAvailablePipeline(actions.PaidRepeat);
         var paidRepeatPurchased =
+            !terminal &&
             IsPaidRepeatPurchased(actions) &&
             actions.Repeat.Count > 0 &&
             HasAvailablePipeline(actions.Repeat);
@@ -175,6 +185,18 @@ public partial class MainWindow : Window
 
     private bool IsPaidRepeatPurchased(DrumActionMapping actions) =>
         bool.TryParse(GetVariable(actions.PaidRepeatPurchasedVariable), out var purchased) && purchased;
+
+    private bool IsTerminalAction(DrumActionMapping actions)
+    {
+        if (string.IsNullOrWhiteSpace(actions.TerminalVariable) ||
+            string.IsNullOrWhiteSpace(actions.TerminalEquals))
+            return false;
+
+        return string.Equals(
+            GetVariable(actions.TerminalVariable),
+            actions.TerminalEquals,
+            StringComparison.OrdinalIgnoreCase);
+    }
 
     private void ClearRepeatState(DrumActionMapping actions, bool clearWinner)
     {
