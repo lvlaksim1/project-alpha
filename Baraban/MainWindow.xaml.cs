@@ -71,6 +71,7 @@ public partial class MainWindow : Window
     {
         _drum = DrumList.SelectedItem as DrumDefinition;
         RequestList.ItemsSource = _drum?.Requests;
+        _results.Clear();
         _variables.Clear();
         if (_drum is not null)
         {
@@ -81,6 +82,11 @@ public partial class MainWindow : Window
         }
         RenderVariables();
         ResultGrid.ItemsSource = null;
+        ResultEmptyText.Text = "Результат появится здесь после запуска цепочки.";
+        ResultEmptyText.Visibility = Visibility.Visible;
+        ResponseText.Clear();
+        ResponseStatusText.Text = "";
+        ResponseGrid.ItemsSource = null;
     }
 
     private void RequestList_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -96,7 +102,10 @@ public partial class MainWindow : Window
         MethodBox.Text = _request.Method;
         UrlText.Text = _request.Url;
         HeadersText.Text = string.Join(Environment.NewLine, _request.Headers.Select(x => $"{x.Key}: {x.Value}"));
-        BodyText.Text = _request.Body;
+        BodyText.Text = JsonTextFormatter.PrettyOrOriginal(_request.Body);
+        ResponseText.Clear();
+        ResponseStatusText.Text = "";
+        ResponseGrid.ItemsSource = null;
     }
 
     private void SaveRequest_Click(object sender, RoutedEventArgs e)
@@ -106,7 +115,8 @@ public partial class MainWindow : Window
         _request.Method = MethodBox.Text.Trim().ToUpperInvariant();
         _request.Url = UrlText.Text.Trim();
         _request.Headers = ParseHeaders(HeadersText.Text);
-        _request.Body = BodyText.Text;
+        _request.Body = JsonTextFormatter.PrettyOrOriginal(BodyText.Text);
+        BodyText.Text = _request.Body;
 
         if (_drum is not null)
         {
@@ -128,20 +138,28 @@ public partial class MainWindow : Window
             return;
         SaveRequest_Click(sender, e);
         ApplyVariablesFromText();
+        _results.Clear();
+        ResultGrid.ItemsSource = null;
+        ResultEmptyText.Text = "Выполняется цепочка...";
+        ResultEmptyText.Visibility = Visibility.Visible;
         try
         {
             await SyncBrowserSessionIfReadyAsync();
             var result = await _executor.SendAsync(_request, _session, _variables);
             _results[_request.Id] = result;
             WorkflowRunner.Capture(_request, result.ResponseBody, _variables);
-            ResponseText.Text = $"HTTP {result.StatusCode} {result.ReasonPhrase}\r\n\r\n{result.ResponseBody}";
+            ResponseStatusText.Text = $"HTTP {result.StatusCode} {result.ReasonPhrase}";
+            ResponseText.Text = JsonTextFormatter.PrettyOrOriginal(result.ResponseBody);
+            ResponseGrid.ItemsSource = JsonTableProjector.Build(result.ResponseBody).DefaultView;
             AppendLog($"{_request.Id}: HTTP {result.StatusCode}");
             RenderVariables();
             RenderResult();
         }
         catch (Exception ex)
         {
-            ResponseText.Text = ex.ToString();
+            ResponseStatusText.Text = "Ошибка";
+            ResponseText.Text = ex.Message;
+            ResponseGrid.ItemsSource = null;
             AppendLog($"{_request.Id}: ERROR {ex.Message}");
         }
     }
@@ -180,8 +198,21 @@ public partial class MainWindow : Window
     {
         if (_drum is null)
             return;
+
         var table = ResultProjector.Build(_drum, _results, _variables);
         ResultGrid.ItemsSource = table.DefaultView;
+
+        if (table.Rows.Count == 0)
+        {
+            ResultEmptyText.Text = _results.Count == 0
+                ? "Результат появится здесь после запуска цепочки."
+                : "Цепочка выполнена, но строки результата не найдены.";
+            ResultEmptyText.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            ResultEmptyText.Visibility = Visibility.Collapsed;
+        }
     }
 
     private void ResultGrid_LoadingRow(object sender, DataGridRowEventArgs e)
@@ -331,9 +362,6 @@ public partial class MainWindow : Window
         return result;
     }
 
-    private void AppendLog(string value)
-    {
-        LogText.AppendText($"[{DateTime.Now:HH:mm:ss}] {value}{Environment.NewLine}");
-        LogText.ScrollToEnd();
-    }
+    private static void AppendLog(string value) =>
+        System.Diagnostics.Debug.WriteLine($"[{DateTime.Now:HH:mm:ss}] {value}");
 }
