@@ -123,10 +123,27 @@
   - source: action timestamps + API chronology in full capture
   - authority: verified-runtime evidence
 
-- After the second observed spin the server offered `needPaid=true`, `за 49 ₽`, with a complete payment `modalView.order`. Captured production JS maps `buyOffer` to `POST /api/v1/loyalty-view/offer`, but the payment confirmation itself was not executed in runtime traffic. Therefore paid repeat may be displayed but must not auto-submit until runtime evidence exists.
-  - source: second PUT response + captured production JS
-  - authority: verified-response + verified-code; payment runtime-unverified
+- After the second observed spin the server offered `needPaid=true`, `за 49 ₽`, with a complete payment `modalView.order`. A later owner capture directly records confirmation: the browser sends `POST /api/v1/loyalty-view/offer` with that exact order object and receives HTTP 200 / `success=true` for a 49 RUR debit.
+  - source: owner-supplied paid-repeat capture `Browser-Network-20261002-061155.zip`
+  - authority: verified-runtime evidence
 
 - Identical repeated Alfa Online requests can carry different `X-GIB-FGSSCw-...` values. Request path alone is therefore not a sufficient durability scope for all Group-IB headers.
   - source: full capture sequences 25/42/62/64
+  - authority: verified-runtime evidence
+
+
+- Paid Alfa Online repeat semantics are now directly observed: payment POST first, then a separate wheel GET/reset, then a separate normal PUT /accept to determine the new winner. The paid POST must never be bundled into an automatically retried chain with the reset/spin.
+  - source: action/API chronology in paid-repeat capture
+  - authority: verified-runtime evidence
+
+- The observed payment body is account-specific and must come from `reconfirmButton.modalView.order` at runtime. Public module code must never hard-code the owner's loyalty/account identifiers or the captured order payload.
+  - source: paid-repeat request body + public-repository secrecy constraint
+  - authority: verified-runtime + architecture constraint
+
+- Payment success is evidenced by HTTP 2xx plus response `success=true`; in the observed capture the response also reports 49 RUR and button `Крутить скорее!`.
+  - source: paid-repeat response body
+  - authority: verified-runtime evidence
+
+- After the observed paid purchase, the subsequent spin returned winner 21931 (Аптеки 7%) and again exposed a paid repeat offer, so the paid cycle can recur.
+  - source: paid-repeat capture
   - authority: verified-runtime evidence
