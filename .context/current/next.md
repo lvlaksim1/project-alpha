@@ -1,7 +1,8 @@
 # Next actions
 
-1. Owner: update the current Project Alpha installation with `ProjectAlpha-Update-to-v0.3.13.exe`.
-2. Import the newest capture `Browser-Network-20261002-061155.zip` when testing the paid-repeat endpoint, because it contains the observed POST /offer request profile in addition to the wheel GET/PUT profiles.
+1. Owner: update the current Project Alpha installation with `ProjectAlpha-Update-to-v0.3.14.exe`.
+2. Verify the new **Отправить** button in **Параметры последнего запроса (расширенный режим)**: edit a harmless GET request, send it without saving, and confirm the response appears while the module file remains unchanged unless **Сохранить параметры** is pressed.
+10. Import the newest capture `Browser-Network-20261002-061155.zip` when testing the paid-repeat endpoint, because it contains the observed POST /offer request profile in addition to the wheel GET/PUT profiles.
 3. Verify the Alfa Online module still shows the correct ten prize options and resolves `winnerOffer.id` to the human-readable prize name.
 4. Verify free repeat remains: **Крутить ещё — 1 попытка → GET reset → Крутить скорее! → PUT /accept**.
 5. When a paid repeat is offered, Project Alpha should show **Крутить ещё — за 49 ₽** and a separate warning that confirmation causes a real debit.
