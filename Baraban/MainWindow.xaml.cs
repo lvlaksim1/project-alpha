@@ -112,8 +112,17 @@ public partial class MainWindow : Window
 
         var hasClaim = actions.Claim.Count > 0 && HasAvailablePipeline(actions.Claim);
         var hasRepeat = HasRepeatOffer(actions) && actions.Repeat.Count > 0 && HasAvailablePipeline(actions.Repeat);
-        var hasPaidRepeat = HasPaidRepeatOffer(actions);
-        GetPrizeButton.IsEnabled = active && (hasClaim || hasRepeat || hasPaidRepeat);
+        var hasPaidRepeat =
+            HasPaidRepeatOffer(actions) &&
+            actions.PaidRepeat.Count > 0 &&
+            HasAvailablePipeline(actions.PaidRepeat);
+        var paidRepeatPurchased =
+            IsPaidRepeatPurchased(actions) &&
+            actions.Repeat.Count > 0 &&
+            HasAvailablePipeline(actions.Repeat);
+
+        GetPrizeButton.IsEnabled =
+            active && (hasClaim || hasRepeat || hasPaidRepeat || paidRepeatPurchased);
     }
 
     private void UpdateActionPresentation()
@@ -164,6 +173,9 @@ public partial class MainWindow : Window
     private bool HasPaidRepeatOffer(DrumActionMapping actions) =>
         bool.TryParse(GetVariable(actions.RepeatNeedPaidVariable), out var needPaid) && needPaid;
 
+    private bool IsPaidRepeatPurchased(DrumActionMapping actions) =>
+        bool.TryParse(GetVariable(actions.PaidRepeatPurchasedVariable), out var purchased) && purchased;
+
     private void ClearRepeatState(DrumActionMapping actions, bool clearWinner)
     {
         foreach (var variable in new[]
@@ -180,6 +192,11 @@ public partial class MainWindow : Window
 
         if (clearWinner && !string.IsNullOrWhiteSpace(actions.WinnerVariable))
             _variables[actions.WinnerVariable] = "";
+
+        if (!string.IsNullOrWhiteSpace(actions.PaidRepeatOrderVariable))
+            _variables[actions.PaidRepeatOrderVariable] = "";
+        if (!string.IsNullOrWhiteSpace(actions.PaidRepeatSuccessVariable))
+            _variables[actions.PaidRepeatSuccessVariable] = "";
     }
 
     private HttpRequestDefinition? FindRequest(string id) =>
@@ -412,21 +429,102 @@ public partial class MainWindow : Window
 
             var actions = GetEffectiveActions();
 
+            if (IsPaidRepeatPurchased(actions))
+            {
+                if (actions.Repeat.Count == 0 || !HasAvailablePipeline(actions.Repeat))
+                    throw new InvalidOperationException(
+                        "Оплата повторной попытки подтверждена, но модуль не содержит pipeline подготовки барабана.");
+
+                OperationStatusText.Text = "Подготавливаю оплаченную повторную попытку...";
+                var paidReset = await RunActionPipelineAsync(actions.Repeat);
+
+                if (!string.IsNullOrWhiteSpace(actions.PaidRepeatPurchasedVariable))
+                    _variables[actions.PaidRepeatPurchasedVariable] = "false";
+
+                ClearRepeatState(actions, clearWinner: true);
+                _showWinnerState = false;
+                RenderVariables();
+                RenderPrizeOptions();
+
+                if (paidReset is not null)
+                    RenderHttpResponse(paidReset);
+
+                CurrentPrizeText.Text =
+                    "Оплаченная попытка подготовлена. Нажмите «Крутить скорее!», чтобы сервер выбрал новый приз.";
+                OperationStatusText.Text = "Оплаченная повторная попытка готова.";
+                UpdateActionPresentation();
+                return;
+            }
+
             if (HasPaidRepeatOffer(actions))
             {
+                if (actions.PaidRepeat.Count == 0 || !HasAvailablePipeline(actions.PaidRepeat))
+                    throw new InvalidOperationException(
+                        "Сервер предлагает платную повторную попытку, но модуль не содержит платёжный pipeline.");
+
                 var repeatTitle = GetVariable(actions.RepeatTitleVariable);
                 var repeatSubtitle = GetVariable(actions.RepeatSubtitleVariable);
                 var paidLabel = string.Join(" — ", new[] { repeatTitle, repeatSubtitle }
                     .Where(x => !string.IsNullOrWhiteSpace(x)));
+                var motivation = GetVariable(actions.MotivationVariable);
+                var order = GetVariable(actions.PaidRepeatOrderVariable);
 
-                MessageBox.Show(
+                if (string.IsNullOrWhiteSpace(order))
+                    throw new InvalidOperationException(
+                        "Сервер не передал параметры оплаты повторной попытки. Обновите состояние барабана и попробуйте снова.");
+
+                var prompt =
+                    $"Оплатить повторную попытку «{paidLabel}»?\n\n" +
+                    "Будет выполнено реальное списание со счёта кэшбэка. " +
+                    "Предыдущий выигрыш будет потерян при следующей прокрутке.";
+
+                if (!string.IsNullOrWhiteSpace(motivation))
+                    prompt = motivation + "\n\n" + prompt;
+
+                var paymentConfirm = MessageBox.Show(
                     this,
-                    $"Сервер предлагает платную повторную попытку: {paidLabel}.\n\n" +
-                    "В предоставленном capture есть только предложение оплаты, но нет сетевого запроса фактического подтверждения покупки. " +
-                    "Project Alpha не будет отправлять неизвестный платёжный запрос без runtime-evidence.",
-                    "Платная повторная попытка",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+                    prompt,
+                    paidLabel,
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+
+                if (paymentConfirm != MessageBoxResult.Yes)
+                    return;
+
+                OperationStatusText.Text = $"Оплачиваю «{paidLabel}»...";
+                var payment = await RunActionPipelineAsync(actions.PaidRepeat);
+
+                if (payment is null || payment.StatusCode < 200 || payment.StatusCode >= 300)
+                    throw new InvalidOperationException(
+                        "Сервер не подтвердил оплату повторной попытки.");
+
+                var successText = GetVariable(actions.PaidRepeatSuccessVariable);
+                if (!string.IsNullOrWhiteSpace(actions.PaidRepeatSuccessVariable) &&
+                    !string.Equals(successText, "true", StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidOperationException(
+                        "Сервер ответил на платёжный запрос, но не подтвердил успешное списание.");
+
+                if (!string.IsNullOrWhiteSpace(actions.PaidRepeatPurchasedVariable))
+                    _variables[actions.PaidRepeatPurchasedVariable] = "true";
+
+                foreach (var variable in new[]
+                         {
+                             actions.RepeatTitleVariable,
+                             actions.RepeatSubtitleVariable,
+                             actions.RepeatNeedPaidVariable,
+                             actions.MotivationVariable,
+                             actions.PaidRepeatOrderVariable
+                         })
+                {
+                    if (!string.IsNullOrWhiteSpace(variable))
+                        _variables[variable] = "";
+                }
+
+                RenderVariables();
+                RenderHttpResponse(payment);
+                OperationStatusText.Text =
+                    "Оплата подтверждена сервером. Нажмите «Крутить скорее!», чтобы подготовить оплаченную попытку.";
+                UpdateActionPresentation();
                 return;
             }
 
