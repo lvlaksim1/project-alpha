@@ -56,10 +56,19 @@ public sealed class DrumActionMapping
     public List<DrumActionStep> PrizeOptions { get; set; } = [];
     public List<DrumActionStep> State { get; set; } = [];
     public List<DrumActionStep> Claim { get; set; } = [];
+    public List<DrumActionStep> Repeat { get; set; } = [];
     public string PrizeResultRequestId { get; set; } = "";
     public string StateResultRequestId { get; set; } = "";
     public string WinnerVariable { get; set; } = "offerWinId";
     public bool ClaimRequiresWinner { get; set; } = true;
+    public string PrizeOptionsLabel { get; set; } = "Получить варианты призов";
+    public string StateLabel { get; set; } = "Состояние барабана";
+    public string ClaimLabel { get; set; } = "Получить приз";
+    public string ClaimLabelVariable { get; set; } = "";
+    public string RepeatTitleVariable { get; set; } = "";
+    public string RepeatSubtitleVariable { get; set; } = "";
+    public string RepeatNeedPaidVariable { get; set; } = "";
+    public string MotivationVariable { get; set; } = "";
 }
 
 public sealed class DrumActionStep
