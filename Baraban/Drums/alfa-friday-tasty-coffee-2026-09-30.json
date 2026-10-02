@@ -16,9 +16,14 @@
       "name": "0. Получить карточку Alfa-Пятницы",
       "method": "GET",
       "url": "https://link.alfabank.ru/partner-offers/api/v1/offer/{{offerId}}",
-      "headers": {"Accept":"*/*","Referer":"https://link.alfabank.ru/partner-offers/friday/{{offerId}}"},
+      "headers": {
+        "Accept": "*/*",
+        "Referer": "https://link.alfabank.ru/partner-offers/friday/{{offerId}}"
+      },
       "body": "",
-      "captures": {"advertCampaignId":"$.drumId"},
+      "captures": {
+        "advertCampaignId": "$.drumId"
+      },
       "autoRun": true,
       "isConfirmation": false
     },
@@ -27,7 +32,12 @@
       "name": "Диагностика. getAdvertCampaign",
       "method": "POST",
       "url": "https://link.alfabank.ru/partner-offers/api/LoyaltyRouletteService/getAdvertCampaign",
-      "headers": {"Accept":"*/*","Content-Type":"application/json","Origin":"https://link.alfabank.ru","Referer":"https://link.alfabank.ru/partner-offers/friday/{{offerId}}"},
+      "headers": {
+        "Accept": "*/*",
+        "Content-Type": "application/json",
+        "Origin": "https://link.alfabank.ru",
+        "Referer": "https://link.alfabank.ru/partner-offers/friday/{{offerId}}"
+      },
       "body": "{}",
       "captures": {},
       "autoRun": false,
@@ -38,9 +48,17 @@
       "name": "1. Получить состояние барабана",
       "method": "POST",
       "url": "https://link.alfabank.ru/partner-offers/api/LoyaltyRouletteService/getCustomerOffersDrum",
-      "headers": {"Accept":"*/*","Content-Type":"application/json","Origin":"https://link.alfabank.ru","Referer":"https://link.alfabank.ru/partner-offers/friday/{{offerId}}"},
+      "headers": {
+        "Accept": "*/*",
+        "Content-Type": "application/json",
+        "Origin": "https://link.alfabank.ru",
+        "Referer": "https://link.alfabank.ru/partner-offers/friday/{{offerId}}"
+      },
       "body": "{\n  \"advertCampaignId\": {{advertCampaignId}}\n}",
-      "captures": {"available":"$.available","offerWinId":"$.offerWinId"},
+      "captures": {
+        "available": "$.available",
+        "offerWinId": "$.offerWinId"
+      },
       "autoRun": true,
       "isConfirmation": false
     },
@@ -49,7 +67,12 @@
       "name": "2. Получить варианты призов",
       "method": "POST",
       "url": "https://link.alfabank.ru/partner-offers/api/LoyaltyRouletteService/getOfferDrums",
-      "headers": {"Accept":"*/*","Content-Type":"application/json","Origin":"https://link.alfabank.ru","Referer":"https://link.alfabank.ru/partner-offers/friday/{{offerId}}"},
+      "headers": {
+        "Accept": "*/*",
+        "Content-Type": "application/json",
+        "Origin": "https://link.alfabank.ru",
+        "Referer": "https://link.alfabank.ru/partner-offers/friday/{{offerId}}"
+      },
       "body": "{\n  \"offerDrumId\": {{available}}\n}",
       "captures": {},
       "autoRun": true,
@@ -60,7 +83,12 @@
       "name": "3. ПОДТВЕРДИТЬ выигрыш",
       "method": "POST",
       "url": "https://link.alfabank.ru/partner-offers/api/LoyaltyRouletteService/confirmDrumOffer",
-      "headers": {"Accept":"*/*","Content-Type":"application/json","Origin":"https://link.alfabank.ru","Referer":"https://link.alfabank.ru/partner-offers/friday/{{offerId}}"},
+      "headers": {
+        "Accept": "*/*",
+        "Content-Type": "application/json",
+        "Origin": "https://link.alfabank.ru",
+        "Referer": "https://link.alfabank.ru/partner-offers/friday/{{offerId}}"
+      },
       "body": "{\n  \"advertCampaignId\": {{advertCampaignId}},\n  \"offerWinId\": {{offerWinId}}\n}",
       "captures": {},
       "autoRun": false,
@@ -72,8 +100,43 @@
     "itemsPath": "$",
     "drumIdPath": "offerDrumId",
     "offerIdPath": "offerId",
-    "titlePaths": ["discountName","discountDescription","moreDescription","name"],
+    "titlePaths": [
+      "discountName",
+      "discountDescription",
+      "moreDescription",
+      "name"
+    ],
     "winnerVariable": "offerWinId",
-    "requireOfferId": true
+    "requireOfferId": false
+  },
+  "actions": {
+    "prizeOptions": [
+      {
+        "requestId": "getOfferById"
+      },
+      {
+        "requestId": "getCustomerOffersDrum"
+      },
+      {
+        "requestId": "getOfferDrums"
+      }
+    ],
+    "state": [
+      {
+        "requestId": "getOfferById"
+      },
+      {
+        "requestId": "getCustomerOffersDrum"
+      }
+    ],
+    "claim": [
+      {
+        "requestId": "confirmDrumOffer"
+      }
+    ],
+    "prizeResultRequestId": "getOfferDrums",
+    "stateResultRequestId": "getCustomerOffersDrum",
+    "winnerVariable": "offerWinId",
+    "claimRequiresWinner": true
   }
 }
