@@ -495,11 +495,32 @@ public partial class MainWindow : Window
             }
         }
 
-        CurrentPrizeText.Text = string.IsNullOrWhiteSpace(winnerId)
-            ? "Текущий приз не определён."
-            : string.IsNullOrWhiteSpace(title)
+        if (string.IsNullOrWhiteSpace(winnerId))
+        {
+            _variables.TryGetValue("confirmed", out var confirmed);
+            if (!actions.ClaimRequiresWinner &&
+                string.Equals(confirmed, "false", StringComparison.OrdinalIgnoreCase))
+            {
+                CurrentPrizeText.Text =
+                    "Барабан ещё не прокручен. Победитель будет определён сервером после «Получить приз».";
+            }
+            else if (!actions.ClaimRequiresWinner &&
+                     string.Equals(confirmed, "true", StringComparison.OrdinalIgnoreCase))
+            {
+                CurrentPrizeText.Text =
+                    "Барабан уже подтверждён, но данные winnerOffer ещё не получены.";
+            }
+            else
+            {
+                CurrentPrizeText.Text = "Текущий приз не определён.";
+            }
+        }
+        else
+        {
+            CurrentPrizeText.Text = string.IsNullOrWhiteSpace(title)
                 ? $"Текущий приз: ID сектора {winnerId}"
                 : $"Текущий приз: {title}   •   ID сектора {winnerId}";
+        }
     }
 
     private async void RunWorkflow_Click(object sender, RoutedEventArgs e)
