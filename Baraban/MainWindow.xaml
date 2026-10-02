@@ -315,10 +315,17 @@
                                            Grid.ColumnSpan="2"
                                            FontWeight="SemiBold"
                                            VerticalAlignment="Center"/>
-                                <Button Grid.Column="2"
-                                        Content="Сохранить параметры"
-                                        Click="SaveRequest_Click"
-                                        Padding="12,4"/>
+                                <StackPanel Grid.Column="2"
+                                            Orientation="Horizontal">
+                                    <Button Content="Сохранить параметры"
+                                            Click="SaveRequest_Click"
+                                            Padding="12,4"/>
+                                    <Button Content="Отправить"
+                                            Click="SendEditedRequest_Click"
+                                            Padding="16,4"
+                                            Margin="6,0,0,0"
+                                            FontWeight="SemiBold"/>
+                                </StackPanel>
 
                                 <ComboBox x:Name="MethodBox"
                                           Grid.Row="1"
