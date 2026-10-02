@@ -1,7 +1,7 @@
 {
   "id": "alfa-online-podruzhka-wheel-2026-10",
   "name": "Альфа-Онлайн — Подружка (01–04.10.2026)",
-  "description": "Одноразовый барабан Подружки по capture 02.10.2026. GET wheel-of-fortune возвращает 5 вариантов 20–100%; PUT /accept выбрал winnerOffer.id=22092 (Подружка — 50%). Ответ имеет actionButton.type=endActionButton, поэтому повторная прокрутка блокируется.",
+  "description": "Одноразовый барабан Подружки по capture 02.10.2026. GET wheel-of-fortune возвращает 5 вариантов 20–100%; PUT /accept выбрал winnerOffer.id=22092 (Подружка — 50%). Ответ имеет actionButton.type=endActionButton, поэтому повторная прокрутка блокируется. После terminal endActionButton обычный интерфейс всё равно позволяет вручную повторить PUT /accept по явной команде пользователя; перед отправкой сохраняется confirmation.",
   "loginUrl": "https://web.alfabank.ru/partner-offers/",
   "archived": false,
   "variables": {
@@ -103,7 +103,9 @@
     "claimLabel": "Крутить скорее!",
     "claimLabelVariable": "wheelActionTitle",
     "terminalVariable": "wheelActionType",
-    "terminalEquals": "endActionButton"
+    "terminalEquals": "endActionButton",
+    "allowClaimAfterTerminal": true,
+    "terminalRetryLabel": "Повторить PUT /accept"
   },
   "result": {
     "sourceRequestId": "getWheelOfFortune",
