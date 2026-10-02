@@ -1,6 +1,7 @@
 # Manager intentions and commitments
 
 ## Completed
+- Add one-shot manual sending of edited requests from the advanced request editor, keep persistence separate, retain confirmation for potentially mutating requests, fix repair-mode seed-if-missing delivery of mutable modules, and release v0.3.14.
 - Analyze the 06:11 paid-repeat capture, verify the real POST /loyalty-view/offer payment request and post-payment GET/PUT sequence, implement explicit paid reroll support without hard-coding account-specific order data, and release v0.3.13.
 - Analyze the full 05:45 Alfa Online capture with two real spins and the free reroll; replace the incorrect `isWinner` assumption with authoritative `winnerOffer.id`, implement the observed `Крутить скорее! → Крутить ещё → Крутить скорее!` state machine, and release it as v0.3.12.
 - Analyze the owner-provided 02.10.2026 Alfa Online capture, identify the distinct `v1/loyalty-view` wheel mechanism, generalize the three UI actions to per-drum pipelines, add the `alfa-online-supercashback-wheel-2026-10` module, and release the finalized support as v0.3.10.
@@ -26,7 +27,7 @@
 - Enforce minimal GitHub storage / no Actions-artifact policy.
 
 ## Active
-- Obtain owner-side confirmation of v0.3.13 on the real installation. Paid-repeat testing remains optional because it causes a real 49 ₽ debit; if the owner chooses to test it, verify POST success, no duplicate payment, GET preparation, and the subsequent PUT winner.
+- Obtain owner-side confirmation of v0.3.14 on the real installation, including the new edited-request **Отправить** workflow. Paid-repeat testing remains optional because it causes a real 49 ₽ debit; Paid-repeat testing remains optional because it causes a real 49 ₽ debit; if the owner chooses to test it, verify POST success, no duplicate payment, GET preparation, and the subsequent PUT winner.
 - Live-verify recorder ZIP session restoration on Windows.
 - Live-verify the current Alfa-Friday non-mutating request chain from Project Alpha.
 - Preserve multi-drum modularity and explicit confirmation semantics in all future changes.
