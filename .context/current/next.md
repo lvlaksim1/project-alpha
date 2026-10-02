@@ -1,10 +1,10 @@
 # Next actions
 
-1. Owner: apply `ProjectAlpha-Update-to-v0.3.8.exe` to the confirmed v0.3.7 installation.
-2. Verify that the main window no longer scrolls horizontally as a whole; scrollbars must exist only inside data fields/tables, and the Result/HTTP splitters must resize pane heights by mouse.
-3. Verify `Ctrl+F` search in JSON fields and result/HTTP tables.
-4. On the HTTP tab, press `Получить варианты призов` and confirm that the prize list is populated with readable Russian text.
-5. Press `Состояние барабана`; confirm that the prize list remains visible and the current prize is shown by name by matching `offerWinId` to the prize list.
-6. Verify the Result tab / `Запустить цепочку` now populates the same prize table. If it is still empty, use the now-readable real `getOfferDrums` response to refine the adaptive projection against observed runtime data.
-7. Test `Получить приз` only when the owner intentionally wants to send the explicit confirmation request; keep the Yes/No confirmation barrier.
-8. Continue end-to-end recorder ZIP / authenticated WebView2 verification after the v0.3.8 UI/runtime checkpoint.
+1. Owner: update the current v0.3.8 installation with `ProjectAlpha-Update-to-v0.3.10.exe`.
+2. Import the supplied/new fresh Network Recorder ZIP for the Alfa Online cabinet and select **«Альфа-Онлайн — Суперкэшбэк (октябрь 2026)»**.
+3. Press **«Получить варианты призов»** and verify that the ten `offers[]` rows render with readable partner/discount names.
+4. Press **«Состояние барабана»**. If `confirmed=false`, the UI should report that the current prize is not yet determined; if already confirmed, it should resolve the winner by `winnerOfferId` or `isWinner`.
+5. Only when the owner intentionally wants to spin/claim, press **«Получить приз»** and confirm Yes. This sends the new-cabinet mutating action only after explicit confirmation.
+6. Treat the `PUT /api/v1/loyalty-view/accept` path as runtime-unverified until this real-machine test succeeds: the capture did not contain an actual spin request, although the endpoint/body were recovered from the captured production JavaScript and the active `NewClick_NewWheelOfFortune` feature flag.
+7. If the mutating request is rejected because fresh endpoint-specific security headers are required, capture the real browser spin request and adapt only from that runtime evidence; do not synthesize protected headers.
+8. Recheck the existing Alfa-Friday module after v0.3.10 to confirm the generic action-pipeline fallback preserved its behavior.
