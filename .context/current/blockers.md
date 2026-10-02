@@ -8,3 +8,6 @@
 
 6. The new Alfa Online non-mutating wheel GET is capture-verified, but the actual spin/claim request was not present in the supplied capture. The `PUT /api/v1/loyalty-view/accept` + `type: DRUM` path is grounded in captured production JavaScript and the active feature flag, but still requires owner-side runtime verification.
 7. The new cabinet may require fresh endpoint-specific security headers for winner/claim endpoints. Preserve the policy: replay only legitimately captured/observed values; if the direct claim is rejected, obtain a real browser capture of that endpoint rather than synthesizing protected headers.
+
+6. Alfa Online Supercashback runtime verification is pending on the owner's machine. The non-mutating `GET wheel-of-fortune` was directly observed in the supplied capture; the active `PUT /accept` claim contract is verified from captured production JavaScript but was not executed in that recording.
+7. Dynamic `X-GIB-...` security headers remain request-specific. The program may reuse stable same-host context such as XSRF/device/screen/time-zone headers, but must not synthesize or globally copy dynamic security headers. If the unobserved claim endpoint rejects the request, obtain runtime evidence rather than guessing.
