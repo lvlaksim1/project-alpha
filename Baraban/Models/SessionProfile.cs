@@ -3,6 +3,7 @@ namespace Baraban.Models;
 public sealed class SessionProfile
 {
     public Dictionary<string, string> Headers { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    public Dictionary<string, Dictionary<string, string>> HostHeaders { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public Dictionary<string, Dictionary<string, string>> RequestHeaders { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     public List<StoredCookie> Cookies { get; set; } = [];
     public BrowserStorageState? BrowserStorage { get; set; }
