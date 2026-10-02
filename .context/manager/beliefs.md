@@ -159,3 +159,17 @@
 - Repair-mode distribution of mutable built-in modules uses seed-if-missing semantics: all target mutable module files are available in the repair payload, but are copied only when absent. Existing user-editable module files are never overwritten by repair seeding.
   - source: v0.3.14 release-gate remediation
   - authority: verified-ci
+
+- The owner-provided capture `Browser-Network-20261002-132502.zip` establishes two additional Alfa Online one-shot partner wheels.
+  - Подружка: basketOfferId 22072; five options 20–100%; observed winner 22092 = 50%.
+  - М.ВИДЕО: basketOfferId 21837; six options 10–100%; observed winner 21867 = 70%.
+  - source: owner-supplied runtime capture, 2026-10-02
+  - authority: verified-runtime evidence
+
+- Both Подружка and М.ВИДЕО return `actionButton.type=endActionButton` / `title=Отлично` after their observed PUT /accept. This is terminal evidence: the ordinary action UI must not offer another spin for these modules.
+  - source: observed winner responses in the owner capture
+  - authority: verified-runtime evidence
+
+- Terminal behavior is module data, not partner-specific UI logic. Project Alpha supports a module-defined terminal variable/value pair so future one-shot wheels can disable their mutating action without hard-coded partner names.
+  - source: v0.3.15 architecture
+  - authority: implemented-and-verified-ci
