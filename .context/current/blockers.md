@@ -1,6 +1,5 @@
 # Current blockers and open risks
 
-1. The corrected cumulative updater v0.3.5 is fully CI-verified, including Windows PowerShell 5.1 and mixed-install repair mode, but it still needs owner-side verification on the exact real machine where v0.3.4 failed with generic exit code 1.
 2. Full browser-session ZIP restoration still needs end-to-end runtime verification on the owner's Windows machine with a fresh recorder export.
 3. IndexedDB and Cache Storage are not restored. Add them only if live testing proves they are required for session continuity.
 4. Captured request-specific dynamic security headers may have server-defined freshness/replay limits. Do not attempt to synthesize or bypass them; prefer fresh WebView2-observed traffic when imported values are rejected.
