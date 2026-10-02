@@ -58,6 +58,7 @@ public sealed class DrumActionMapping
     public string PrizeResultRequestId { get; set; } = "";
     public string StateResultRequestId { get; set; } = "";
     public string WinnerVariable { get; set; } = "offerWinId";
+    public bool ClaimRequiresWinner { get; set; } = true;
 }
 
 public sealed class DrumActionStep
