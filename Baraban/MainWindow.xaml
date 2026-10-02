@@ -378,7 +378,19 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
-                        <WrapPanel Margin="0,0,0,8">
+                        <WrapPanel Margin="0,0,0,8" VerticalAlignment="Center">
+                            <TextBlock Text="Профиль:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <ComboBox x:Name="AuthProfileBox"
+                                      Width="220"
+                                      IsEditable="True"
+                                      SelectionChanged="AuthProfileBox_SelectionChanged"
+                                      Margin="0,0,8,0"/>
+                            <Button Content="Сохранить как профиль"
+                                    Click="SaveAuthProfileAs_Click"
+                                    Margin="0,0,8,0"/>
+                            <Button Content="Удалить профиль"
+                                    Click="DeleteAuthProfile_Click"
+                                    Margin="0,0,14,0"/>
                             <Button Content="Перечитать" Click="ReloadSession_Click" Margin="0,0,8,0"/>
                             <Button Content="Сохранить JSON" Click="SaveSession_Click" Margin="0,0,8,0"/>
                             <Button Content="Импорт Cookie header" Click="ImportCookieHeader_Click" Margin="0,0,8,0"/>
