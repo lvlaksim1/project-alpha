@@ -138,10 +138,6 @@ public partial class MainWindow : Window
             return;
         SaveRequest_Click(sender, e);
         ApplyVariablesFromText();
-        _results.Clear();
-        ResultGrid.ItemsSource = null;
-        ResultEmptyText.Text = "Выполняется цепочка...";
-        ResultEmptyText.Visibility = Visibility.Visible;
         try
         {
             await SyncBrowserSessionIfReadyAsync();
@@ -174,6 +170,10 @@ public partial class MainWindow : Window
             return;
         }
         ApplyVariablesFromText();
+        _results.Clear();
+        ResultGrid.ItemsSource = null;
+        ResultEmptyText.Text = "Выполняется цепочка...";
+        ResultEmptyText.Visibility = Visibility.Visible;
         try
         {
             await SyncBrowserSessionIfReadyAsync();
@@ -189,6 +189,8 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
+            ResultEmptyText.Text = "Не удалось получить результат.";
+            ResultEmptyText.Visibility = Visibility.Visible;
             AppendLog("Workflow ERROR: " + ex.Message);
             MessageBox.Show(this, ex.Message, "Ошибка цепочки", MessageBoxButton.OK, MessageBoxImage.Error);
         }
