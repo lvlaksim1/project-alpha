@@ -13,12 +13,16 @@ public sealed class WebViewSessionBridge(SessionStore store)
     };
 
     private string? _storageBootstrapScriptId;
+    private SessionProfile _session = new();
 
     public async Task InitializeAsync(WebView2 webView, SessionProfile session, Action<string>? observedHeader = null)
     {
+        _session = session;
+
         var environment = await CoreWebView2Environment.CreateAsync(null, store.WebViewDataDirectory);
         await webView.EnsureCoreWebView2Async(environment);
         webView.CoreWebView2.AddWebResourceRequestedFilter("*", CoreWebView2WebResourceContext.All);
+
         webView.CoreWebView2.WebResourceRequested += (_, args) =>
         {
             try
@@ -32,15 +36,15 @@ public sealed class WebViewSessionBridge(SessionStore store)
                     observed[header.Key] = header.Value;
 
                     if (IsReusableGlobalHeader(header.Key))
-                        session.Headers[header.Key] = header.Value;
+                        _session.Headers[header.Key] = header.Value;
 
                     if (IsReusableHostHeader(header.Key) &&
                         Uri.TryCreate(args.Request.Uri, UriKind.Absolute, out var observedUri))
                     {
-                        if (!session.HostHeaders.TryGetValue(observedUri.Host, out var hostHeaders))
+                        if (!_session.HostHeaders.TryGetValue(observedUri.Host, out var hostHeaders))
                         {
                             hostHeaders = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                            session.HostHeaders[observedUri.Host] = hostHeaders;
+                            _session.HostHeaders[observedUri.Host] = hostHeaders;
                         }
 
                         hostHeaders[header.Key] = header.Value;
@@ -52,8 +56,23 @@ public sealed class WebViewSessionBridge(SessionStore store)
                 if (observed.Count > 0 && ShouldPersistRequestProfile(args.Request.Uri, observed))
                 {
                     var key = SessionProfile.BuildRequestKey(args.Request.Method, args.Request.Uri);
-                    session.RequestHeaders[key] = observed;
-                    store.Save(session);
+                    _session.RequestHeaders[key] = observed;
+                    store.Save(_session);
+                }
+            }
+            catch
+            {
+            }
+        };
+
+        webView.CoreWebView2.WebResourceResponseReceived += async (_, args) =>
+        {
+            try
+            {
+                if (Uri.TryCreate(args.Request.Uri, UriKind.Absolute, out var uri) &&
+                    IsSessionRelevantHost(uri.Host))
+                {
+                    await SyncCookiesFromBrowserAsync(webView, _session);
                 }
             }
             catch
@@ -67,8 +86,9 @@ public sealed class WebViewSessionBridge(SessionStore store)
         {
             try
             {
-                await ApplyBrowserStorageToCurrentPageAsync(webView, session);
-                await SyncCookiesFromBrowserAsync(webView, session);
+                await ApplyBrowserStorageToCurrentPageAsync(webView, _session);
+                await SyncBrowserStorageFromCurrentPageAsync(webView, _session);
+                await SyncCookiesFromBrowserAsync(webView, _session);
                 observedHeader?.Invoke("Cookies");
             }
             catch
@@ -77,8 +97,39 @@ public sealed class WebViewSessionBridge(SessionStore store)
         };
     }
 
+    public void SetSession(SessionProfile session) => _session = session;
+
+    public async Task ReplaceSessionInBrowserAsync(WebView2 webView, SessionProfile session)
+    {
+        _session = session;
+
+        if (webView.CoreWebView2 is null)
+            return;
+
+        try
+        {
+            webView.CoreWebView2.CookieManager.DeleteAllCookies();
+        }
+        catch
+        {
+        }
+
+        try
+        {
+            await webView.CoreWebView2.ExecuteScriptAsync(
+                "(() => { try { localStorage.clear(); sessionStorage.clear(); } catch (_) {} })();");
+        }
+        catch
+        {
+        }
+
+        await RestoreSessionToBrowserAsync(webView, session);
+    }
+
     public async Task RestoreSessionToBrowserAsync(WebView2 webView, SessionProfile session)
     {
+        _session = session;
+
         if (webView.CoreWebView2 is null)
             return;
 
@@ -87,8 +138,17 @@ public sealed class WebViewSessionBridge(SessionStore store)
         await ApplyBrowserStorageToCurrentPageAsync(webView, session);
     }
 
+    public async Task SyncCurrentBrowserStateAsync(WebView2 webView, SessionProfile session)
+    {
+        _session = session;
+        await SyncBrowserStorageFromCurrentPageAsync(webView, session);
+        await SyncCookiesFromBrowserAsync(webView, session);
+    }
+
     public async Task SyncCookiesFromBrowserAsync(WebView2 webView, SessionProfile session, string? url = null)
     {
+        _session = session;
+
         if (webView.CoreWebView2 is null)
             return;
 
@@ -106,11 +166,62 @@ public sealed class WebViewSessionBridge(SessionStore store)
             IsSecure = cookie.IsSecure,
             SameSite = cookie.SameSite.ToString()
         }).ToList();
+
         store.Save(session);
+    }
+
+    public async Task SyncBrowserStorageFromCurrentPageAsync(WebView2 webView, SessionProfile session)
+    {
+        _session = session;
+
+        if (webView.CoreWebView2 is null)
+            return;
+
+        string raw;
+        try
+        {
+            raw = await webView.CoreWebView2.ExecuteScriptAsync(
+                "(() => { try { return { url: location.href, localStorage: Object.fromEntries(Object.keys(localStorage).map(k => [k, localStorage.getItem(k)])), sessionStorage: Object.fromEntries(Object.keys(sessionStorage).map(k => [k, sessionStorage.getItem(k)])) }; } catch (_) { return null; } })();");
+        }
+        catch
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(raw) || raw == "null")
+            return;
+
+        try
+        {
+            using var document = JsonDocument.Parse(raw);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object ||
+                !root.TryGetProperty("url", out var urlElement))
+                return;
+
+            var url = urlElement.GetString() ?? "";
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
+                uri.Scheme is not ("http" or "https"))
+                return;
+
+            session.BrowserStorage = new BrowserStorageState
+            {
+                Url = url,
+                CapturedAt = DateTimeOffset.UtcNow,
+                LocalStorage = ReadStringMap(root, "localStorage"),
+                SessionStorage = ReadStringMap(root, "sessionStorage")
+            };
+            store.Save(session);
+        }
+        catch
+        {
+        }
     }
 
     public async Task RestoreCookiesToBrowserAsync(WebView2 webView, SessionProfile session)
     {
+        _session = session;
+
         if (webView.CoreWebView2 is null)
             return;
 
@@ -121,16 +232,23 @@ public sealed class WebViewSessionBridge(SessionStore store)
             if (string.IsNullOrWhiteSpace(stored.Name) || string.IsNullOrWhiteSpace(stored.Domain))
                 continue;
 
-            var cookie = manager.CreateCookie(stored.Name, stored.Value, stored.Domain, string.IsNullOrWhiteSpace(stored.Path) ? "/" : stored.Path);
+            var cookie = manager.CreateCookie(
+                stored.Name,
+                stored.Value,
+                stored.Domain,
+                string.IsNullOrWhiteSpace(stored.Path) ? "/" : stored.Path);
+
             cookie.IsHttpOnly = stored.IsHttpOnly;
             cookie.IsSecure = stored.IsSecure;
             if (stored.ExpiresUtc is { } expires)
                 cookie.Expires = expires.UtcDateTime;
+
             if (!string.IsNullOrWhiteSpace(stored.SameSite) &&
                 Enum.TryParse<CoreWebView2CookieSameSiteKind>(stored.SameSite, true, out var sameSite))
             {
                 cookie.SameSite = sameSite;
             }
+
             manager.AddOrUpdateCookie(cookie);
         }
 
@@ -169,6 +287,21 @@ public sealed class WebViewSessionBridge(SessionStore store)
         catch { }
     }
 
+    private static Dictionary<string, string> ReadStringMap(JsonElement root, string property)
+    {
+        var result = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (!root.TryGetProperty(property, out var map) || map.ValueKind != JsonValueKind.Object)
+            return result;
+
+        foreach (var item in map.EnumerateObject())
+        {
+            if (item.Value.ValueKind == JsonValueKind.String)
+                result[item.Name] = item.Value.GetString() ?? "";
+        }
+
+        return result;
+    }
+
     private static string BuildStorageBootstrapScript(BrowserStorageState? state)
     {
         if (state is null || string.IsNullOrWhiteSpace(state.Url) ||
@@ -190,6 +323,10 @@ public sealed class WebViewSessionBridge(SessionStore store)
                "} catch (_) {}" +
                "})();";
     }
+
+    private static bool IsSessionRelevantHost(string host) =>
+        host.Equals("alfabank.ru", StringComparison.OrdinalIgnoreCase) ||
+        host.EndsWith(".alfabank.ru", StringComparison.OrdinalIgnoreCase);
 
     private static bool ShouldPersistRequestProfile(string url, IReadOnlyDictionary<string, string> headers)
     {
