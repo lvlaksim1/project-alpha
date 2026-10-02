@@ -80,3 +80,19 @@
 - The release workflow now persists exact publish manifests by first rebasing that persistence step onto the latest `origin/main`, preventing unrelated concurrent context/documentation commits from making the final manifest push non-fast-forward.
   - source: workflow commit fb9c3cd901307cfcd9afe0314c2d07ae496ef220 + successful release run 36944055642
   - authority: verified-ci
+
+- Owner-confirmed v0.3.7 runtime evidence showed that the request chain itself succeeds (advertCampaignId, available and offerWinId were populated) while the Result table remained empty. Therefore the immediate defect was in result projection/UI interpretation rather than chain execution.
+  - source: owner screenshot and runtime report, 2026-10-02
+  - authority: owner-observed runtime
+
+- Prize/result projection must not require `offerId` as a prerequisite for displaying a prize row. It should locate the actual prize collection adaptively and use stable prize/drum identifiers plus readable title fields.
+  - source: v0.3.7 runtime failure analysis + v0.3.8 remediation
+  - authority: verified-code + owner-observed runtime
+
+- The owner's preferred HTTP workflow is action-oriented rather than request-list-oriented: one persistent workspace with explicit buttons for prize options, drum state, and prize claim; the prize list must remain visible while state is fetched, and current prize ID must be resolved to its human-readable name from that list.
+  - source: owner directive, 2026-10-02
+  - authority: owner-directive
+
+- Scrolling belongs inside data controls, not around the whole application window. Multi-pane data areas should be mouse-resizable with splitters while staying bounded by the main window.
+  - source: owner directive after v0.3.7 runtime review, 2026-10-02
+  - authority: owner-directive
