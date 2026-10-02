@@ -68,9 +68,12 @@ public static class ResultProjector
                     string.IsNullOrWhiteSpace(title))
                     continue;
 
-                var isWinner = !string.IsNullOrWhiteSpace(winner) &&
-                               !string.IsNullOrWhiteSpace(drumId) &&
-                               string.Equals(drumId, winner, StringComparison.OrdinalIgnoreCase);
+                var winnerById = !string.IsNullOrWhiteSpace(winner) &&
+                                 !string.IsNullOrWhiteSpace(drumId) &&
+                                 string.Equals(drumId, winner, StringComparison.OrdinalIgnoreCase);
+                var winnerByFlag = !string.IsNullOrWhiteSpace(mapping.WinnerFlagPath) &&
+                                   IsTrue(item, mapping.WinnerFlagPath);
+                var isWinner = winnerById || winnerByFlag;
 
                 table.Rows.Add(
                     index++,
@@ -249,6 +252,21 @@ public static class ResultProjector
         }
 
         return null;
+    }
+
+    private static bool IsTrue(JsonElement root, string path)
+    {
+        var element = JsonPath.Select(root, path);
+        if (element is null)
+            return false;
+
+        return element.Value.ValueKind switch
+        {
+            JsonValueKind.True => true,
+            JsonValueKind.String => bool.TryParse(element.Value.GetString(), out var value) && value,
+            JsonValueKind.Number => element.Value.TryGetInt32(out var number) && number != 0,
+            _ => false
+        };
     }
 
     private static string? ScalarValue(JsonElement element) =>
