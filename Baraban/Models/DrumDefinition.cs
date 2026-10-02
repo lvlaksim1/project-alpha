@@ -38,6 +38,7 @@ public sealed class ResultMapping
     public string OfferIdPath { get; set; } = "offerId";
     public List<string> TitlePaths { get; set; } = [];
     public string WinnerVariable { get; set; } = "offerWinId";
+    public string WinnerFlagPath { get; set; } = "";
     public bool RequireOfferId { get; set; } = true;
 }
 
