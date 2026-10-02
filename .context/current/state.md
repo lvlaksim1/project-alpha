@@ -5,7 +5,7 @@ Updated: 2026-10-02 MSK
 ## Authority
 - Authoritative repository: `lvlaksim1/project-alpha`.
 - Project Manager context capsule is installed and is the recovery source for future clean chats.
-- Current released application version: `v0.3.13`.
+- Current released application version: `v0.3.14`.
 - Owner's currently confirmed installed version: `v0.3.8`.
 
 ## Application
@@ -41,7 +41,7 @@ Updated: 2026-10-02 MSK
 - Normal updates are delivered as one self-contained cumulative EXE:
   `ProjectAlpha-Update-to-vX.Y.Z.exe`.
 - Current normal update:
-  `ProjectAlpha-Update-to-v0.3.13.exe` (~2.2 MB).
+  `ProjectAlpha-Update-to-v0.3.14.exe` (~2.2 MB).
 - Owner-side execution of the v0.3.4 updater failed on the real installation with generic exit code 1 despite reconstructed-base CI success.
 - The failure class was traced to Windows PowerShell 5.1 handling of the updater script plus insufficient real-install compatibility assumptions.
 - v0.3.5 remediation includes:
@@ -123,3 +123,12 @@ Updated: 2026-10-02 MSK
 - v0.3.13 implements a generic paid-repeat pipeline. It extracts the entire payment order at runtime, requires explicit Yes/No confirmation before the real debit, requires both HTTP 2xx and `success=true`, and never retries the POST automatically as part of the subsequent wheel-reset step.
 - v0.3.13 migrates already-installed Alfa Online module JSON by adding only the required paid-repeat variables/request/action mappings while preserving unrelated user edits.
 - Release run `36959665060` completed successfully; cumulative bases, hybrid repair, final Update EXE smoke test and uninstall preservation passed; no Actions artifacts were produced. Repository Hygiene run `36959917957` completed successfully.
+
+
+## Manual request editor
+- v0.3.14 adds an **Отправить** button to **Параметры последнего запроса (расширенный режим)**.
+- Manual send constructs a temporary request from the currently edited Method / URL / Headers / Body and sends it once without persisting those edits to the drum module. **Сохранить параметры** remains the separate persistence action.
+- The manual response is rendered in the normal raw/table response areas and the request's capture mappings update runtime variables.
+- Manual requests marked `IsConfirmation=true`, and every manually edited method other than GET, require a separate Yes/No confirmation before network transmission.
+- The first v0.3.14 release attempt exposed a repair-mode packaging gap: new mutable drum files could be omitted when an old reconstructed base fell back to repair mode. Repair manifests now package all mutable target files as `seedIfMissing`: absent modules are added, existing user-editable modules are never overwritten.
+- v0.3.14 release run `36962085875` passed cumulative base tests, hybrid repair, compiled Update EXE smoke-test and uninstall preservation. No Actions artifacts were produced.
