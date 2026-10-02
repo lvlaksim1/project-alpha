@@ -1,7 +1,7 @@
 {
   "id": "alfa-online-supercashback-wheel-2026-10",
   "name": "Альфа-Онлайн — Суперкэшбэк (октябрь 2026)",
-  "description": "Модуль барабана Альфа-Онлайн по capture 02.10.2026. Варианты и состояние читаются через wheel-of-fortune; при активном NewClick_NewWheelOfFortune получение приза выполняется через PUT /accept с type=DRUM.",
+  "description": "Модуль барабана Альфа-Онлайн по capture 02.10.2026. До прокрутки GET wheel-of-fortune возвращает confirmed=false и isWinner=false для всех offers. Победитель определяется только из winnerOffer.id ответа PUT /accept либо GET /wheel-of-fortune/winner после confirmed=true.",
   "loginUrl": "https://web.alfabank.ru/marketplace/?loyaltyType=104",
   "archived": false,
   "variables": {
@@ -102,6 +102,6 @@
     ],
     "winnerVariable": "winnerOfferId",
     "requireOfferId": false,
-    "winnerFlagPath": "isWinner"
+    "winnerFlagPath": ""
   }
 }
