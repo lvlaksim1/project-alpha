@@ -1,6 +1,7 @@
 # Manager intentions and commitments
 
 ## Completed
+- Release v0.3.16: explicitly re-enable second terminal PUT for Подружка/М.ВИДЕО, add persistent named authorization profiles, live cookie/browser-storage persistence, Set-Cookie capture, active-profile restoration/warm-up, and document the observed `authExpiredRefreshToken` evidence without inventing an unobserved refresh API.
 - Analyze the 13:25 Network Recorder capture, add capture-grounded Подружка and М.ВИДЕО one-shot Alfa Online modules, generalize terminal action handling so `endActionButton` disables repeated mutation, and release v0.3.15.
 - Add one-shot manual sending of edited requests from the advanced request editor, keep persistence separate, retain confirmation for potentially mutating requests, fix repair-mode seed-if-missing delivery of mutable modules, and release v0.3.14.
 - Analyze the 06:11 paid-repeat capture, verify the real POST /loyalty-view/offer payment request and post-payment GET/PUT sequence, implement explicit paid reroll support without hard-coding account-specific order data, and release v0.3.13.
@@ -28,7 +29,7 @@
 - Enforce minimal GitHub storage / no Actions-artifact policy.
 
 ## Active
-- Obtain owner-side confirmation of v0.3.15 on the real installation: both new modules are seeded, prize lists render correctly, winner IDs map to names, and terminal **Отлично** disables a second spin.
-- Verify the v0.3.14 edited-request **Отправить** workflow on the owner's machine.
-- Keep paid-repeat testing optional because it causes a real debit; never trigger it automatically.
-- Live-verify recorder ZIP session restoration and preserve all existing Alfa-Friday / Alfa Online mechanisms.
+- Obtain owner-side runtime confirmation of v0.3.16 profile persistence across restart and switching between at least two authorization profiles.
+- If the owner intentionally tests a second terminal PUT, record the actual server response and update the partner-wheel model from that evidence.
+- Capture an Alfa Online session continuously across real auth-token expiry to identify the actual `authExpiredRefreshToken` network exchange.
+- Preserve existing Alfa-Friday and Alfa Online Supercashback behaviors while session/profile infrastructure evolves.
