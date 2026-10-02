@@ -1,6 +1,7 @@
 # Manager intentions and commitments
 
 ## Completed
+- Add automatic application version to the main window title and release it as v0.3.6; publish a complete Russian user guide for all current controls.
 - Verify `ProjectAlpha-Update-to-v0.3.5.exe` on the owner's real installation that had failed with v0.3.4; owner confirmed successful update on 2026-10-02.
 - Create public `lvlaksim1/project-alpha` and install the Project Manager capsule.
 - Migrate the current application into the new neutral repository.
@@ -17,6 +18,7 @@
 - Enforce minimal GitHub storage / no Actions-artifact policy.
 
 ## Active
+- Obtain owner-side confirmation that v0.3.6 displays `Baraban v0.3.6` in the window title after cumulative update from the confirmed v0.3.5 installation.
 - Live-verify recorder ZIP session restoration on Windows.
 - Live-verify the current Alfa-Friday non-mutating request chain from Project Alpha.
 - Preserve multi-drum modularity and explicit confirmation semantics in all future changes.
