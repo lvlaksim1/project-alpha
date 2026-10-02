@@ -6,7 +6,11 @@ namespace Baraban.Services;
 
 public sealed class SessionStore
 {
-    private readonly JsonSerializerOptions _json = new() { WriteIndented = true };
+    private readonly JsonSerializerOptions _json = new()
+    {
+        WriteIndented = true,
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    };
 
     public string RootDirectory { get; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Baraban");
