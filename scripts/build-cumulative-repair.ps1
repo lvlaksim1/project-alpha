@@ -32,15 +32,20 @@ if ([string]$targetManifest.tag -ne $TargetTag) {
     throw "Target manifest tag '$($targetManifest.tag)' does not match '$TargetTag'."
 }
 
+$targetAll = @{}
 $target = @{}
 foreach ($entry in @($targetManifest.files)) {
-    if ([bool]$entry.mutable) { continue }
     $path = Normalize-Path ([string]$entry.path)
-    $target[$path] = [pscustomobject]@{
+    $normalizedEntry = [pscustomobject]@{
         path = $path
         sha256 = ([string]$entry.sha256).ToLowerInvariant()
         size = [long]$entry.size
-        mutable = $false
+        mutable = [bool]$entry.mutable
+    }
+
+    $targetAll[$path] = $normalizedEntry
+    if (-not $normalizedEntry.mutable) {
+        $target[$path] = $normalizedEntry
     }
 }
 
@@ -50,6 +55,7 @@ if ($bases.Count -eq 0) {
 }
 
 $baseMaps = @{}
+$mutableChangedCounts = @{}
 $deleteSet = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
 
 foreach ($base in $bases) {
@@ -68,6 +74,19 @@ foreach ($base in $bases) {
             [void]$deleteSet.Add($path)
         }
     }
+
+    foreach ($entry in @($delta.files)) {
+        if (-not [bool]$entry.mutable) { continue }
+
+        $path = Normalize-Path ([string]$entry.path)
+        if (-not $targetAll.ContainsKey($path)) { continue }
+
+        if (-not $mutableChangedCounts.ContainsKey($path)) {
+            $mutableChangedCounts[$path] = 0
+        }
+        $mutableChangedCounts[$path] = [int]$mutableChangedCounts[$path] + 1
+    }
+
     $baseMaps[[string]$base.version] = $map
 }
 
@@ -82,6 +101,16 @@ foreach ($path in $target.Keys) {
     }
 }
 
+# Mutable files are normally preserved. A mutable target file is safe to seed
+# only when every supported base delta reports it as new/changed; this means
+# the file did not exist in any supported released base (for example a newly
+# introduced built-in drum module). Existing user-editable drum files remain untouched.
+foreach ($path in $mutableChangedCounts.Keys) {
+    if ([int]$mutableChangedCounts[$path] -eq $bases.Count) {
+        [void]$repairPaths.Add($path)
+    }
+}
+
 $repairRoot = Join-Path $OutputDirectory "repair"
 if (Test-Path -LiteralPath $repairRoot) {
     Remove-Item -LiteralPath $repairRoot -Recurse -Force
@@ -91,7 +120,7 @@ New-Item -ItemType Directory -Path $payloadRoot -Force | Out-Null
 
 $repairFiles = @()
 foreach ($path in @($repairPaths | Sort-Object)) {
-    $entry = $target[$path]
+    $entry = $targetAll[$path]
     $source = Join-Path $CurrentPublishDir ($path.Replace("/", "\"))
     if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
         throw "Target publish file missing: $path"
