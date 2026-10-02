@@ -27,6 +27,7 @@ public sealed class CaptureZipImporter(SessionStore store)
             throw new InvalidDataException($"Неподдерживаемая версия формата: {formatVersion}. Поддерживается версия {SupportedFormatVersion}.");
 
         session.Headers.Clear();
+        session.HostHeaders.Clear();
         session.RequestHeaders.Clear();
         session.Cookies.Clear();
         session.BrowserStorage = null;
@@ -196,6 +197,21 @@ public sealed class CaptureZipImporter(SessionStore store)
 
             foreach (var pair in kept.Where(x => IsReusableGlobalHeader(x.Key)))
                 session.Headers[pair.Key] = pair.Value;
+
+            var hostScoped = kept
+                .Where(x => IsReusableHostHeader(x.Key))
+                .ToDictionary(x => x.Key, x => x.Value, StringComparer.OrdinalIgnoreCase);
+            if (hostScoped.Count > 0)
+            {
+                if (!session.HostHeaders.TryGetValue(uri.Host, out var hostHeaders))
+                {
+                    hostHeaders = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                    session.HostHeaders[uri.Host] = hostHeaders;
+                }
+
+                foreach (var pair in hostScoped)
+                    hostHeaders[pair.Key] = pair.Value;
+            }
         }
 
         return (requestsObserved, profileKeys.Count);
@@ -286,9 +302,11 @@ public sealed class CaptureZipImporter(SessionStore store)
     private static bool IsReusableGlobalHeader(string header) =>
         header.Equals("Authorization", StringComparison.OrdinalIgnoreCase)
         || header.Equals("X-CSRF-Token", StringComparison.OrdinalIgnoreCase)
-        || header.Equals("X-XSRF-TOKEN", StringComparison.OrdinalIgnoreCase)
         || header.Equals("Accept-Language", StringComparison.OrdinalIgnoreCase)
         || header.Equals("User-Agent", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsReusableHostHeader(string header) =>
+        header.Equals("X-XSRF-TOKEN", StringComparison.OrdinalIgnoreCase);
 
     private static string? GetString(JsonElement parent, string propertyName) =>
         parent.TryGetProperty(propertyName, out var value) && value.ValueKind == JsonValueKind.String
