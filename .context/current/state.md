@@ -5,7 +5,8 @@ Updated: 2026-10-02 MSK
 ## Authority
 - Authoritative repository: `lvlaksim1/project-alpha`.
 - Project Manager context capsule is installed and is the recovery source for future clean chats.
-- Current released application version: `v0.3.5`.
+- Current released application version: `v0.3.6`.
+- Owner's currently confirmed installed version: `v0.3.5`.
 
 ## Application
 - Windows desktop client: .NET 8 WPF + WebView2.
@@ -38,7 +39,7 @@ Updated: 2026-10-02 MSK
 - Normal updates are delivered as one self-contained cumulative EXE:
   `ProjectAlpha-Update-to-vX.Y.Z.exe`.
 - Current normal update:
-  `ProjectAlpha-Update-to-v0.3.5.exe` (~2.1 MB).
+  `ProjectAlpha-Update-to-v0.3.6.exe` (~2.1 MB).
 - Owner-side execution of the v0.3.4 updater failed on the real installation with generic exit code 1 despite reconstructed-base CI success.
 - The failure class was traced to Windows PowerShell 5.1 handling of the updater script plus insufficient real-install compatibility assumptions.
 - v0.3.5 remediation includes:
@@ -48,7 +49,9 @@ Updated: 2026-10-02 MSK
   - a version-gated rollback-protected repair path for supported mixed/legacy installations when the exact immutable SHA signature does not match;
   - diagnostic output written and decoded reliably so failures surface a human-readable reason;
   - corrected delta/repair path normalization.
-- Release workflow run `36938695823` completed successfully.
+- Release workflow run `36938695823` completed successfully for v0.3.5, and the owner confirmed that updater on the real machine.
+- v0.3.6 adds automatic display of the executing assembly version in the main Windows title bar as `Baraban vX.Y.Z`.
+- v0.3.6 release rerun `36944055642` completed successfully after hardening exact-manifest persistence against concurrent context commits; exact publish manifest `release/manifests/v0.3.6.json` is persisted.
 - CI verified all supported exact cumulative base paths, a synthetic mixed-install repair path, the compiled single-file Update EXE, the previous-Setup -> update path, and uninstall user-data preservation.
 - Update application retains temporary backup, rollback on failure, full target SHA-256 verification and application restart.
 ## Installer/uninstaller
@@ -60,6 +63,9 @@ Updated: 2026-10-02 MSK
 - Answer Yes: also remove `%LOCALAPPDATA%\Baraban`.
 - Silent/service uninstall preserves user data.
 - CI verified one uninstall entry, correct updated DisplayVersion, and user-data preservation during silent uninstall.
+
+## User documentation
+- Complete Russian user guide is maintained at `docs/USER_GUIDE.md` and covers every current button/tab plus the normal operating flow and manual confirmation warning.
 
 ## Repository hygiene
 - No GitHub Actions artifacts are used or retained.
