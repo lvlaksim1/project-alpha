@@ -1,6 +1,7 @@
 # Manager intentions and commitments
 
 ## Completed
+- Redesign the UI and release v0.3.7: scrollable panes, pretty JSON, workflow button on Result, visible log removal, explicit result empty state, smaller raw HTTP response and structured JSON response table.
 - Add automatic application version to the main window title and release it as v0.3.6; publish a complete Russian user guide for all current controls.
 - Verify `ProjectAlpha-Update-to-v0.3.5.exe` on the owner's real installation that had failed with v0.3.4; owner confirmed successful update on 2026-10-02.
 - Create public `lvlaksim1/project-alpha` and install the Project Manager capsule.
@@ -18,7 +19,7 @@
 - Enforce minimal GitHub storage / no Actions-artifact policy.
 
 ## Active
-- Obtain owner-side confirmation that v0.3.6 displays `Baraban v0.3.6` in the window title after cumulative update from the confirmed v0.3.5 installation.
+- Obtain owner-side confirmation of the v0.3.7 redesigned UI after cumulative update, including the Result-table behavior on a real Alfa-Friday chain.
 - Live-verify recorder ZIP session restoration on Windows.
 - Live-verify the current Alfa-Friday non-mutating request chain from Project Alpha.
 - Preserve multi-drum modularity and explicit confirmation semantics in all future changes.
