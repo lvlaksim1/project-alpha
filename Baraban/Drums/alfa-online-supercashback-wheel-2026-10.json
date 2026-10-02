@@ -14,7 +14,8 @@
     "reconfirmNeedPaid": "",
     "motivationTitle": "",
     "paidRepeatOrder": "",
-    "paidRepeatPurchased": "false"
+    "paidRepeatPurchased": "false",
+    "paidRepeatSuccess": ""
   },
   "requests": [
     {
@@ -95,6 +96,7 @@
       },
       "body": "{{paidRepeatOrder}}",
       "captures": {
+        "paidRepeatSuccess": "$.success",
         "wheelActionTitle": "$.button.title"
       },
       "autoRun": false,
@@ -146,7 +148,8 @@
       }
     ],
     "paidRepeatOrderVariable": "paidRepeatOrder",
-    "paidRepeatPurchasedVariable": "paidRepeatPurchased"
+    "paidRepeatPurchasedVariable": "paidRepeatPurchased",
+    "paidRepeatSuccessVariable": "paidRepeatSuccess"
   },
   "result": {
     "sourceRequestId": "getWheelOfFortune",
