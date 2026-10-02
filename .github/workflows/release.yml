@@ -317,11 +317,17 @@ jobs:
       - name: Persist exact publish manifest in Git
         shell: pwsh
         run: |
+          $savedManifest = Join-Path $env:RUNNER_TEMP 'ProjectAlpha-PublishManifest.json'
+          Copy-Item -LiteralPath .\ProjectAlpha-PublishManifest.json -Destination $savedManifest -Force
+
+          git fetch origin main
+          git checkout -B main origin/main
+
           $manifestDir = Join-Path $PWD 'release\manifests'
           New-Item -ItemType Directory -Path $manifestDir -Force | Out-Null
           $relativeDestination = 'release/manifests/' + $env:TARGET_TAG + '.json'
           $destination = Join-Path $PWD ($relativeDestination.Replace('/', '\'))
-          Copy-Item -LiteralPath .\ProjectAlpha-PublishManifest.json -Destination $destination -Force
+          Copy-Item -LiteralPath $savedManifest -Destination $destination -Force
 
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
@@ -332,5 +338,5 @@ jobs:
           }
           else {
             git commit -m "Record exact publish manifest $env:TARGET_TAG [skip ci]"
-            git push origin HEAD:main
+            git push origin main
           }
