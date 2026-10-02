@@ -306,7 +306,10 @@ public sealed class CaptureZipImporter(SessionStore store)
         || header.Equals("User-Agent", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsReusableHostHeader(string header) =>
-        header.Equals("X-XSRF-TOKEN", StringComparison.OrdinalIgnoreCase);
+        header.Equals("X-XSRF-TOKEN", StringComparison.OrdinalIgnoreCase)
+        || header.Equals("DEVICE-APP-ID", StringComparison.OrdinalIgnoreCase)
+        || header.Equals("X-SCREEN-DIMENSION", StringComparison.OrdinalIgnoreCase)
+        || header.Equals("ZONE-OFFSET", StringComparison.OrdinalIgnoreCase);
 
     private static string? GetString(JsonElement parent, string propertyName) =>
         parent.TryGetProperty(propertyName, out var value) && value.ValueKind == JsonValueKind.String
