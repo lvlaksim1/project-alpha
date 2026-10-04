@@ -1,9 +1,21 @@
 {
   "schema": "context-capsule",
   "version": "2.0.0-dev",
-  "source": "lvlaksim1/context-capsule",
-  "core_commit": "7aa1e697504e686b02a4d7f1539a157214d5e692",
+  "source": "lvlaksim1/context-capsule-project-manager",
+  "core_commit": "3d0d62d76dfe7f218ce84b59db55366bbdb6cc33",
   "installed_at": "2026-10-01",
   "repository": "lvlaksim1/project-alpha",
-  "update_policy": "manual"
+  "update_policy": "manual",
+  "project_manager_commit": "3d0d62d76dfe7f218ce84b59db55366bbdb6cc33",
+  "context_capsule_commit": "2ef41a5ed57ae514cc5980065560d7e55d5e4b9a",
+  "provenance": {
+    "context_capsule": {
+      "repository": "lvlaksim1/context-capsule",
+      "commit": "2ef41a5ed57ae514cc5980065560d7e55d5e4b9a"
+    },
+    "project_manager": {
+      "repository": "lvlaksim1/context-capsule-project-manager",
+      "commit": "3d0d62d76dfe7f218ce84b59db55366bbdb6cc33"
+    }
+  }
 }

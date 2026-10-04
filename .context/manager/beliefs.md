@@ -45,10 +45,12 @@
   - user data: `%LOCALAPPDATA%\Baraban`.
   - authority: implemented-and-verified
 
+  - source: legacy-v2-state
 - Uninstall preserves user data by default and deletes it only after explicit interactive confirmation.
   - exact prompt: `Удалить также настройки и рабочие данные?`
   - authority: owner-directive + verified-ci
 
+  - source: legacy-v2-state
 - CI/repository policy is minimal-storage: no Actions artifacts, no unnecessary caches, latest Release only.
   - source: owner directive
   - authority: owner-directive
@@ -102,15 +104,19 @@
   - response shape: root `confirmed` plus `offers[]` with `id`, `partner`, `discount`, and `isWinner`
   - authority: owner-supplied runtime capture
 
+  - source: legacy-v2-state
 - Captured production JavaScript defines two winner branches. The captured page has `NewClick_NewWheelOfFortune` enabled, so its active mutating branch is `PUT /api/v1/loyalty-view/accept` with `basketOfferId` and `type: DRUM`; the supplied capture itself did not contain an actual spin request.
   - authority: verified captured production code + feature configuration; mutating endpoint not yet owner-runtime-verified
 
+  - source: legacy-v2-state
 - Different cabinets must not share host-specific session/security context indiscriminately. Reusable host headers are scoped by host, while dynamic `X-GIB-*`/trace/request headers remain endpoint/request-specific.
   - authority: architecture requirement derived from multi-cabinet capture evidence
 
+  - source: legacy-v2-state
 - Existing user-editable drum JSON files are mutable state and may intentionally differ from built-in target files. Update verification must require exact hashes for immutable program files, preserve legitimate existing drum edits, and still ensure newly introduced built-in drum modules are seeded.
   - authority: updater design + verified CI v0.3.10
 
+  - source: legacy-v2-state
 - Full owner capture `Browser-Network-20261002-054552.zip` directly records two Alfa Online spins. Both real `PUT /api/v1/loyalty-view/accept` calls use body `{"basketOfferId":"21871","type":"DRUM"}`; the first returned winner 21937 (Цифровые товары 7%), the second 21940 (Такси 7%).
   - source: owner-supplied full runtime capture, 2026-10-02
   - authority: verified-runtime evidence
