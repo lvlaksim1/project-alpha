@@ -23,29 +23,6 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'push' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Delete Actions artifacts
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: pwsh
-        run: |
-          $ids = gh api "repos/$env:GITHUB_REPOSITORY/actions/artifacts?per_page=100" --paginate --jq '.artifacts[].id'
-          foreach ($id in $ids) {
-            if ($id) {
-              gh api --method DELETE "repos/$env:GITHUB_REPOSITORY/actions/artifacts/$id"
-            }
-          }
-
-      - name: Keep only latest release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: pwsh
-        run: |
-          $releases = gh release list --repo $env:GITHUB_REPOSITORY --limit 100 --json tagName,publishedAt | ConvertFrom-Json
-          $old = $releases | Sort-Object { [datetime]$_.publishedAt } -Descending | Select-Object -Skip 1
-          foreach ($release in $old) {
-            gh release delete $release.tagName --repo $env:GITHUB_REPOSITORY --cleanup-tag --yes
-          }
-
       - name: Keep only recent workflow runs
         env:
           GH_TOKEN: ${{ github.token }}
