@@ -3,5 +3,78 @@
   "owner": "project:lvlaksim1/project-alpha",
   "created_at": "2026-11-01T11:22:58+00:00",
   "migration_status": "requires_manager_reconciliation",
-  "tasks": []
+  "tasks": [
+    {
+      "id": "TASK-HIST-20261101-project-alpha-v0316-auth-profiles",
+      "title": "Подтвердить на Windows сохранность именованных авторизационных профилей Project Alpha после обновления v0.3.16",
+      "priority": "P1",
+      "status": "open",
+      "created_at": "2026-11-01T19:06:09+00:00",
+      "updated_at": "2026-11-01T19:06:09+00:00",
+      "source_handoff": "",
+      "history": [
+        {
+          "at": "2026-11-01T19:06:09+00:00",
+          "actor": "agent:ecosystem-supervisor",
+          "action": "created",
+          "detail": "direct"
+        }
+      ],
+      "acceptance_criteria": "После разрешённой установки проверить повторное открытие, профиль «Основной», создание второго профиля, выбор активного аккаунта, разделение браузерных состояний и сохранность запросов; не отправлять повторные PUT автоматически.",
+      "source_ref": ".context/current/next.md",
+      "source_evidence": {
+        "reference": ".context/current/next.md",
+        "sha256": "2bfee837bdc63b7797caf4a5ab8882e8a39c72c7ea84e137e0cee1795e7557ab"
+      },
+      "reconciliation_status": "pending_manager_review"
+    },
+    {
+      "id": "TASK-HIST-20261101-project-alpha-auth-refresh-real-capture",
+      "title": "Получить реальное доказательство Alfa Online refresh при естественном истечении токена",
+      "priority": "P1",
+      "status": "open",
+      "created_at": "2026-11-01T19:06:09+00:00",
+      "updated_at": "2026-11-01T19:06:09+00:00",
+      "source_handoff": "",
+      "history": [
+        {
+          "at": "2026-11-01T19:06:09+00:00",
+          "actor": "agent:ecosystem-supervisor",
+          "action": "created",
+          "detail": "direct"
+        }
+      ],
+      "acceptance_criteria": "Непрерывный разрешённый захват через Network Recorder до истечения действующего токена; зафиксировать реально наблюдаемый обмен, не выдумывать endpoint/динамические security headers.",
+      "source_ref": ".context/current/blockers.md",
+      "source_evidence": {
+        "reference": ".context/current/blockers.md",
+        "sha256": "2b3b46442fa737118074efaac09efe2b6d4b61588107f9c8d2c4195c64fa80f3"
+      },
+      "reconciliation_status": "pending_manager_review"
+    },
+    {
+      "id": "TASK-HIST-20261101-project-alpha-regression-after-profiles",
+      "title": "Выполнить контроль регрессий Alfa-Friday и Supercashback после изменения авторизационных профилей",
+      "priority": "P2",
+      "status": "open",
+      "created_at": "2026-11-01T19:06:09+00:00",
+      "updated_at": "2026-11-01T19:06:09+00:00",
+      "source_handoff": "",
+      "history": [
+        {
+          "at": "2026-11-01T19:06:09+00:00",
+          "actor": "agent:ecosystem-supervisor",
+          "action": "created",
+          "detail": "direct"
+        }
+      ],
+      "acceptance_criteria": "Немутирующие запросы проверки доступны; денежные/повторные операции запускаются только после явного подтверждения владельца и не выполняются этим поручением.",
+      "source_ref": ".context/current/next.md",
+      "source_evidence": {
+        "reference": ".context/current/next.md",
+        "sha256": "2bfee837bdc63b7797caf4a5ab8882e8a39c72c7ea84e137e0cee1795e7557ab"
+      },
+      "reconciliation_status": "pending_manager_review"
+    }
+  ]
 }
